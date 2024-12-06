@@ -68,7 +68,7 @@ And calls the following functions.
 ```{r}
 # source(here::here('R','get_vessel_length.R'))
 # source(here::here('R','lengths_2yr_median.R'))
-# source(here::here('R','get_mode.R'))
+# source(here::here('R','get_mode.R'))              ##can't find this file in the 'R' subfolder
 # source(here::here('R','lengths_5yr_registration.R'))
 ```
 <br>
