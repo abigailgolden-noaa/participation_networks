@@ -79,10 +79,11 @@ Select your directories.
 ```{r get_dir}
 ## raw PacFIN fish ticket data file location
 #indir1 <- "/Users/jameal.samhouri/Documents/Koehn et al. cc vulnerability/Data/"
-indir2 <- "/Users/jameal.samhouri/Documents/CCIEA Networks/raw/"
+#indir2 <- "/Users/jameal.samhouri/Documents/CCIEA Networks/raw/"
+indir3 <- "/Users/abigail.golden/Desktop/Research/24 - CEFI/data/fish_tickets/raw/"
 
 ## output directory for confidential data
-out_conf_dir <- "/Users/jameal.samhouri/Documents/CCIEA Networks/processed/"
+out_conf_dir <- "/Users/abigail.golden/Desktop/Research/24 - CEFI/data/fish_tickets/processed/"
 
 ## output directory for processed fish tickets. not confidential
 processdir <- "data/input"
@@ -94,15 +95,15 @@ If you have a new download of fish ticket data and want to clean it up a bit and
 
 # NOTE: reading in PacFIN csv's for multiple years is SLOW, and took >1.5hrs on JS macbook
 
-# tmpfile <- 'fish tickets 2016-2023 121323.csv' # latest pull from PacFIN 12-13-2023
-# tmpfile2 <- read.csv(paste0(indir2,tmpfile))
-# glimpse(tmpfile2)
-# 
-# #as.Date(tmpfile2[1,]$LANDING_DATE, "%m/%d/%Y")
-# 
-# # # LANDING_YEAR in more recent data pulls has a time associated with it. convert myfile2$LANDING_DATE to date formats that exclude time. added 12-29-2021
-# tmpfile2$LANDING_DATE <- as.Date(tmpfile2$LANDING_DATE, "%m/%d/%Y")
-# write_rds(tmpfile2, paste0(out_conf_dir,'fish tickets 2016-2023 121323.rds'))
+tmpfile <- '2024_12_09_pacfin_fishtickets.csv' # latest pull from PacFIN 12-09-2024
+tmpfile2 <- read.csv(paste0(indir3,tmpfile))
+glimpse(tmpfile2)
+
+as.Date(tmpfile2[1,]$LANDING_DATE , "%d-%b-%y")
+
+# # LANDING_YEAR in more recent data pulls has a time associated with it. convert myfile2$LANDING_DATE to date formats that exclude time. added 12-29-2021
+tmpfile2$LANDING_DATE <- as.Date(tmpfile2$LANDING_DATE, "%d-%b-%y")
+write_rds(tmpfile2, paste0(out_conf_dir,'fish tickets 2010-2024 120924.rds'))
 
 ```
 
@@ -115,7 +116,7 @@ Specify file name of the raw fish ticket data file and supporting files with spe
 # myfile2 <- "fish tickets 2004-2021 122921.csv" # latest pull from PacFIN: 12-29-21.
 # myfile2 <- "pacfin_compiled_2004thru2021.rds" # latest pull from PacFIN: 12-29-21.
 
-myfile2 <- 'fish tickets 2016-2023 121323.rds' # latest pull from PacFIN 12-13-2023
+myfile2 <- 'fish tickets 2010-2024 120924.rds' # latest pull from PacFIN 12-09-2024
 
 myfile3 <- "iopac_conversion_table.csv"
 myfile4 <- "species_groupings_spgrpn2_iea.csv" # originally from first tab of species_groupings IEA.xlsx from Dan Holland. see email of 121520
@@ -130,13 +131,13 @@ Set a few more user inputs to process the fish tickets
 *If you decide to write out the processed fish ticket data using crab years as time increments (`crab_year=TRUE`), be sure to supply all of the necessary calendar years. For example, if you are processing fish tickets for the 2014 crab year, you will need to read in raw PacFIN fish ticket data for the calendar years 2013 and 2014; if you are processing fish tickets for the 2014 and 2015 crab years, you will need to read in raw PacFIN fish ticket data for calendar years 2014,2015,2016.*
 ```{r inputs}
 ## do you want to write out the fish ticket data as crab years? [TRUE/FALSE]
-crab_year = TRUE
+crab_year = FALSE
 
 ## if crab_year = TRUE, which crab years of fish tickets are you processing? [numeric vector]
 crab_years <- seq(2016,2022)
 
 ## which years of fish tickets are you processing? [numeric vector]
-years <- seq(2016,2023)
+years <- seq(2010,2024)
 
 ## do you want to write out the average price per pounds calculated from the data? [TRUE/FALSE]
 write_ppp = FALSE
@@ -171,9 +172,9 @@ NOTE: you can skip reading in the individual raw data files if "pacfin_compiled_
 
 # # grab 2004-2021 csv, WARNING: takes a long time to read in this 8GB file
 # 
-# rawdat2 <- read.csv(paste0(indir2,myfile2)) %>%
+# rawdat2 <- read.csv(paste0(indir3,myfile2)) %>%
 #   filter(LANDING_YEAR %in% years)
-# print("2004-2021 fish ticket data column names")
+# paste(first(years), "-", last(years), "fish ticket data column names", sep = " ")
 # colnames(rawdat2)
 # 
 # # LANDING_YEAR in more recent data pulls has a time associated with it. convert rawdat2$LANDING_DATE to date formats that exclude time. added 12-29-2021
@@ -230,7 +231,7 @@ rm(rawdat)
 ```
 <br>
 
-Remove fish tickets with an unknown (`UNKNOWN`) OR MISSING (`""` / `MISSING`) vessel identifier. As of December 2021, this results in dropping almost 2M records.
+Remove fish tickets with an unknown (`UNKNOWN`) OR MISSING (`""` / `MISSING`) vessel identifier. As of December 2024, this results in dropping about 1.5M records.
 ```{r filter}
 nrows_pre <- dim(rawdat.sub)
 rawdat.sub <- rawdat.sub %>%
