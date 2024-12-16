@@ -49,7 +49,7 @@ participation_network_crabyear <- function(tickets, edge_type="connectivity", pc
   # create a df where each column is a SPGRPN2, and values represent the total revenue for a boat in a crab year from that SPGRPN2
   boats <- tickets %>% filter(drvid != 'NONE') %>%
     group_by(drvid, SPGRPN2, crab_year) %>% #removed mutate; changed year to crab_year MF 2/26/2019
-    summarise(revenue = sum(adj_revenue), .groups = "drop") %>% #changed summarize to summarise, JS 11092018; added , .groups = "drop" JS 01-13-2022
+    summarise(revenue = sum(adj_afi_revenue), .groups = "drop") %>% #changed summarize to summarise, JS 11092018; added , .groups = "drop" JS 01-13-2022
     pivot_wider(names_from=SPGRPN2, values_from=revenue, values_fill = NA)
   boats <- as.data.frame(boats)
   rownames(boats) <- paste(boats$drvid, boats$crab_year, sep="_")
