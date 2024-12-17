@@ -69,7 +69,8 @@ Select your directories.
 indir = "/Users/abigail.golden/Desktop/Research/24 - CEFI/data/fish_tickets/processed"
 
 ## output directory for igraph objects
-outdir_ports = 'data/networks/participation_vessel_ports'
+outdir_ports = "/Users/abigail.golden/Desktop/Research/24 - CEFI/data/fish_tickets/partipation_networks"
+
 # outdir_states = 'data/networks/participation_vessel_states'
 
 ## output directory for network viz
@@ -270,7 +271,8 @@ for(y in years){
       dat, 
       filter = TRUE, filter_subgraph = FALSE,
       edge_type="connectivity", pcid_choose=iopac, state_choose = NA, year_choose=y, min_vessels = vessel_cutoff, min_contribution = contr_cutoff, min_rev = total_rev_cutoff, min_rev_indiv = indiv_rev_cutoff,
-      write_out=FALSE)
+      write_out=TRUE,
+      out_dir = outdir_ports)
     
     if(any(is.na(tmp_g))){
       message("\n\n WARNING: No fishing at ", iopac, " in crab year ", y, "!\n\n") # updated to iopac 03-10-21, was No fishing at ", p, "
