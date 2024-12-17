@@ -55,7 +55,8 @@ This script requires the following packages.
 if(!require("tidyverse")) {install.packages("tidyverse")}
 if(!require("foreign")) {install.packages("foreign")}
 if(!require("lubridate")) {install.packages("lubridate")}
-if(!require("facetscales")) {devtools::install_github("zeehio/facetscales"); library(facetscales)}
+## facetscales package author archived the package and recommends using cowplot or patchwork instead
+# if(!require("facetscales")) {devtools::install_github("zeehio/facetscales"); library(facetscales)}
 if(!require("ggplot2")) {install.packages("ggplot2")}
 if(!require("grid")) {install.packages("grid")}
 if(!require("gridExtra")) {install.packages("gridExtra")}
@@ -81,10 +82,11 @@ pngdir <- 'results/figures'
 
 What are the names of the `.csv` files with the network statistics that you want to compare? Would not suggest listing more than 4. Files should all be in the input directory (`indir`) specified above.
 ```{r}
-filenames <- c("VesselLevelNodeStats_2004_2020_21pcgroups_totalrev5000_indivrev500_connectivity_rmCrab_10pContribution.csv")
-networkstats_filename <- "VesselLevelNetworkStats_2004_2020_21pcgroups_totalrev5000_indivrev500_connectivity_rmCrab_10pContribution.csv"
+filenames <- c("VesselLevelNodeStats_2011_2024_21pcgroups_totalrev5000_indivrev500_connectivity_rmCrab_10pContribution.csv")
+networkstats_filename <- "VesselLevelNetworkStats_2011_2024_21pcgroups_totalrev5000_indivrev500_connectivity_rmCrab_10pContribution.csv"
 hci_filename <- 'ei_hci_rgn1_M.csv'
 port_filename <- 'iopac_conversion_table.csv'
+
 ```
 <br>
 
@@ -104,7 +106,7 @@ network_metrics <- c('ed') # ,'ed_weighted'
 
 Specify which fisheries to retain from the full data set.
 ```{r}
-myfisheries <- c('Tuna')
+myfisheries <- c('Salmon', 'Crab', 'Coastal pelagics')
 ```
 <br>
 
@@ -215,7 +217,8 @@ metric_label="Node Strength"
 
 ```{r echo=FALSE, fig.width=10}
 # filter and re-arrange data for plotting
-plotdat <- dat_long %>% filter(metric==plot_metric)
+plotdat <- dat_long %>% filter(metric==plot_metric,
+                               metier.cm=="Salmon")
 
 # color palette
 pal=pnw_palette("Starfish",length(unique(plotdat$pcgroup)), type = "discrete") # or choose a different PNWColors palette
@@ -227,8 +230,8 @@ figx <- ggplot(plotdat, aes(x=year, y=value, color=pcgroup)) +
   scale_color_manual(values=pal) +
   scale_x_continuous(breaks=seq(min(plotdat$year), max(plotdat$year), by=2), labels=seq(min(plotdat$year), max(plotdat$year), by=2)) +
   ylim(c(0,1)) +
-  labs(title='Node Strength of Tuna in Fisheries Participation Networks',
-       subtitle = '2004-2021',
+  labs(title='Node Strength of Salmon in Fisheries Participation Networks',
+       subtitle = '2011-2024',
        x = "Year",
        y = metric_label
        ) +
@@ -257,7 +260,7 @@ dev.off()
 
 ## Figure y.Time series of importance
 
-... at WA and OR ports from 2004-2020. Importance (eigenvalue centrality) was derived from vessel-level networks summarized at the port level. Nodes (fisheries) are included in each network with a minimum total fisheries revenue cutoff for vessels of `$5,000` and a minimum revenue cutoff for individual fisheries of `$500`.
+... at WA and OR ports from 2011-2020. Importance (eigenvalue centrality) was derived from vessel-level networks summarized at the port level. Nodes (fisheries) are included in each network with a minimum total fisheries revenue cutoff for vessels of `$5,000` and a minimum revenue cutoff for individual fisheries of `$500`.
 
 ```{r}
 plot_metric="Importance"
@@ -267,7 +270,8 @@ metric_label="Importance"
 
 ```{r echo=FALSE, fig.width=10}
 # filter and re-arrange data for plotting
-plotdat <- dat_long %>% filter(metric==plot_metric)
+plotdat <- dat_long %>% filter(metric==plot_metric,
+                               metier.cm=="Salmon")
 
 # color palette
 pal=pnw_palette("Starfish",length(unique(plotdat$pcgroup)), type = "discrete") # or choose a different PNWColors palette
@@ -279,8 +283,8 @@ figy <- ggplot(plotdat, aes(x=year, y=value, color=pcgroup)) +
   scale_color_manual(values=pal) +
   scale_x_continuous(breaks=seq(min(plotdat$year), max(plotdat$year), by=2), labels=seq(min(plotdat$year), max(plotdat$year), by=2)) +
   ylim(c(0,1)) +
-  labs(title='Importance of Tuna in Fisheries Participation Networks',
-       subtitle = '2004-2021',
+  labs(title='Importance of Salmon in Fisheries Participation Networks',
+       subtitle = '2011-2021',
        x = "Year",
        y = metric_label
        ) +
@@ -375,7 +379,7 @@ fig_ed <- ggplot(dat2 %>% filter( `Port Group` != "Other Coastal Washington" & `
   scale_x_continuous(breaks=seq(min(dat2$Year)+1, max(dat2$Year)+1, by=2), labels=seq(min(dat2$Year)+1, max(dat2$Year)+1, by=2)) +
   ylim(c(0,1)) +
   labs(title='Edge Density in Fisheries Participation Networks',
-       subtitle = '2005-2021',
+       subtitle = '2011-2024',
        x = "Year",
        y = metric_label
        ) +
