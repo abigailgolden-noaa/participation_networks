@@ -15,7 +15,7 @@
 #' @param min_rev the minimum revenue (in dollars) generated from all fisheries for a given vessel in a given year
 #' @param min_rev_indiv the minimum revenue (in dollars) generated from any one fishery for a given vessel in a given year
 #' @param write_out specify whether to write out the adjacency matrix A that is used to build the graph. not yet coded in below, will make it easier if you want to manually adjust the igraph vertex / edge attributes later. 
-#' @return non-confidential fisheries partition network as an igraph object
+#' @return non-confidential fisheries participation network as an igraph object
 #' @examples
 #' close_g <- participation_network_crabyear(close_dat, filter = TRUE, filter_subgraph = FALSE)
 #' @export
@@ -204,9 +204,8 @@ participation_network_crabyear <- function(tickets, edge_type="connectivity", pc
       # write out both confidential and non-confidential versions of the A matrix.
       write.csv(A, here::here(out_dir,paste0("A_",pcid_choose, "_", year_choose,"_vessels.csv")), row.names=TRUE)
       write.csv(A_confidential, here::here(out_dir,paste0("A_",pcid_choose, "_", year_choose,"_confidential_vessels.csv")), row.names=TRUE)
-    }
   }
-
+}
   # added 08202021  
   if(write_out & !is.na(state_choose)){
     if(edge_type=="connectivity"){
