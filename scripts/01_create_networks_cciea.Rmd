@@ -69,7 +69,7 @@ Select your directories.
 indir = "/Users/abigail.golden/Desktop/Research/24 - CEFI/data/fish_tickets/processed"
 
 ## output directory for igraph objects
-outdir_ports = "/Users/abigail.golden/Desktop/Research/24 - CEFI/data/fish_tickets/partipation_networks"
+outdir_ports = 'data/networks/participation_vessel_ports'
 
 # outdir_states = 'data/networks/participation_vessel_states'
 
@@ -249,10 +249,10 @@ edgetype <- "connectivity"
 ```{r eval=TRUE}
 
 
-y=2021
-p = "AST"
-iopac = "Astoria"
-wc_state = "W"
+# y=2021
+# p = "AST"
+# iopac = "Astoria"
+# wc_state = "W"
 
 for(y in years){
   for(iopac in myports){ # updated to iopac 03-10-21, was p
