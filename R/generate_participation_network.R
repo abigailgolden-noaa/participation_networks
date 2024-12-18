@@ -20,6 +20,16 @@
 #' close_g <- participation_network_crabyear(close_dat, filter = TRUE, filter_subgraph = FALSE)
 #' @export
 
+tickets <- dat
+
+pcid_choose=iopac
+state_choose = NA
+year_choose=y
+min_vessels = vessel_cutoff
+min_contribution = contr_cutoff
+min_rev = total_rev_cutoff
+min_rev_indiv = indiv_rev_cutoff
+
 participation_network_crabyear <- function(tickets, edge_type="connectivity", pcid_choose=NA, state_choose = NA, year_choose=NA, filter, filter_subgraph, min_vessels = 3, min_contribution = 0.10, min_rev = 1, min_rev_indiv = 1, write_out, out_dir){
   if(!is.na(state_choose)){
     tickets = dplyr::filter(tickets, agid %in% state_choose) # updated 08-20-21
