@@ -95,15 +95,15 @@ If you have a new download of fish ticket data and want to clean it up a bit and
 
 # NOTE: reading in PacFIN csv's for multiple years is SLOW, and took >1.5hrs on JS macbook
 
-tmpfile <- '2024_12_17_pacfin_fishtickets_2004_to_2024.csv' # latest pull from PacFIN 12-09-2024
-tmpfile2 <- read.csv(paste0(indir3,tmpfile))
-glimpse(tmpfile2)
-
-as.Date(tmpfile2[1,]$LANDING_DATE , "%d-%b-%y")
-
-# # LANDING_YEAR in more recent data pulls has a time associated with it. convert myfile2$LANDING_DATE to date formats that exclude time. added 12-29-2021
-tmpfile2$LANDING_DATE <- as.Date(tmpfile2$LANDING_DATE, "%d-%b-%y")
-write_rds(tmpfile2, paste0(out_conf_dir,'fish tickets 2004-2024 121724.rds'))
+# tmpfile <- '2024_12_17_pacfin_fishtickets_2004_to_2024.csv' # latest pull from PacFIN 12-09-2024
+# tmpfile2 <- read.csv(paste0(indir3,tmpfile))
+# glimpse(tmpfile2)
+# 
+# as.Date(tmpfile2[1,]$LANDING_DATE , "%d-%b-%y")
+# 
+# # # LANDING_YEAR in more recent data pulls has a time associated with it. convert myfile2$LANDING_DATE to date formats that exclude time. added 12-29-2021
+# tmpfile2$LANDING_DATE <- as.Date(tmpfile2$LANDING_DATE, "%d-%b-%y")
+# write_rds(tmpfile2, paste0(out_conf_dir,'fish tickets 2004-2024 121724.rds'))
 
 ```
 
@@ -212,12 +212,12 @@ NOTE: you can skip reading in the individual raw data files if "pacfin_compiled_
 
 Subset the raw data to include only the columns that are needed. Then rename the columns that will be retained in the final processed data. The last three columns are used to calculate per-species / total revenue and landed weight, but will not ultimately be retained.
 ```{r subset}
-rawdat.sub <- select(rawdat, c(FISH_TICKET_ID, PACFIN_PORT_CODE, PACFIN_GROUP_PORT_CODE, VESSEL_NUM, AGENCY_CODE, COUNCIL_CODE, 
+rawdat.sub <- select(rawdat, c(FISH_TICKET_ID, PARTICIPATION_GROUP_CODE, PACFIN_PORT_CODE, PACFIN_GROUP_PORT_CODE, VESSEL_NUM, AGENCY_CODE, COUNCIL_CODE, 
                                GEAR_CODE, PACFIN_GROUP_GEAR_CODE, REMOVAL_TYPE_NAME, REMOVAL_TYPE_CODE, DEALER_NUM, FLEET_CODE,
                                LANDING_DATE, LANDING_YEAR, 
                                PACFIN_SPECIES_CODE, LANDED_WEIGHT_LBS, PRICE_PER_POUND, AFI_PRICE_PER_POUND, EXVESSEL_REVENUE, AFI_EXVESSEL_REVENUE))
 
-colnames(rawdat.sub) <- c("trip_id","pcid", "pcgroup","drvid", "agid", "council",
+colnames(rawdat.sub) <- c("trip_id", "participation_group_code", "pcid", "pcgroup","drvid", "agid", "council",
                           "grid","grgroup","removal_type", "removal_type_code","proc", "fleet",
                           "tdate", "year", 
                           "spid", "pounds", "ppp", "afi_ppp","revenue", "afi_revenue")
@@ -231,14 +231,28 @@ rm(rawdat)
 ```
 <br>
 
-Remove fish tickets with an unknown (`UNKNOWN`) OR MISSING (`""` / `MISSING`) vessel identifier and vessels where `COUNCIL_CODE` is not `P`. This filters out fish tickets for fish landed in AK and sold on the WC (`council == "N"`) and tribal vessels, where many vessels do not have IDs and are assigned random numbers beginning `ZZ` (`council == "*"`). Recommended by Erin Steiner 12/02/2024. As of December 2024, this results in dropping about 2.6M records. About 6M records remain
+Remove fish tickets with an unknown (`UNKNOWN`) OR MISSING (`""` / `MISSING`) vessel identifier,  tickets where `COUNCIL_CODE == N` (fish landed in AK and sold on the West Coast), tickets where `PARTICIPATION_GROUP_CODE != "A"` (aquaculture), and tickets where `FLEET_CODE != "TI"` (tribal vessels, where many vessels do not have IDs and are assigned random numbers beginning `ZZ` (`council == "*"`)). Recommended by Erin Steiner 12/19/2024. As of December 2024, this results in dropping about 2.1M records. About 6.5M records remain.
+
 ```{r filter}
 nrows_pre <- dim(rawdat.sub)
+
+
+## check proportion of all tickets and revenue with council == "N"
+all_revenue <- sum(rawdat.sub$afi_revenue, na.rm = TRUE)
+rawdat.sub %>% 
+  group_by(council) %>% 
+  summarize(total_revenue = sum(afi_revenue, na.rm = TRUE),
+            pct_total_revenue = total_revenue/all_revenue*100)
+
+# check number of tickets dropped with this method
 rawdat.sub <- rawdat.sub %>%
+  filter(council != "N") %>% 
+  filter(participation_group_code != "A") %>% 
+  filter(fleet != "TI") %>% 
   filter(drvid != "UNKNOWN") %>%
   filter(drvid != "") %>%
-  filter(drvid != "MISSING") %>% 
-  filter(council == "P")
+  filter(drvid != "MISSING")
+  
 nrows_post <- dim(rawdat.sub)
 nrows_pre - nrows_post
 ```
