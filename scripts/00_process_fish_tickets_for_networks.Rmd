@@ -237,14 +237,21 @@ Remove fish tickets with an unknown (`UNKNOWN`) OR MISSING (`""` / `MISSING`) ve
 nrows_pre <- dim(rawdat.sub)
 
 
-## check proportion of all tickets and revenue with council == "N"
+# options(scipen = 999)
+
+## check proportion of all tickets and revenue with council == "N" and what ports they're landed at
 all_revenue <- sum(rawdat.sub$afi_revenue, na.rm = TRUE)
 rawdat.sub %>% 
-  group_by(council) %>% 
+  left_join(
+    port_grps, by = c("pcid" = "PACFIN_PORT_CODE")
+  ) %>%
+  group_by(council
+           , IOPAC
+           ) %>% 
   summarize(total_revenue = sum(afi_revenue, na.rm = TRUE),
-            pct_total_revenue = total_revenue/all_revenue*100)
+            pct_total_revenue = total_revenue/all_revenue*100) %>% 
+  filter(council == "N")
 
-# check number of tickets dropped with this method
 rawdat.sub <- rawdat.sub %>%
   filter(council != "N") %>% 
   filter(participation_group_code != "A") %>% 
@@ -253,6 +260,8 @@ rawdat.sub <- rawdat.sub %>%
   filter(drvid != "") %>%
   filter(drvid != "MISSING")
   
+
+# check number of tickets dropped with this method
 nrows_post <- dim(rawdat.sub)
 nrows_pre - nrows_post
 ```
@@ -321,6 +330,30 @@ rawdat.sub3 <- rawdat.sub2 %>%
   )
 ```
 <br>
+
+
+
+```{r explore landings with council == "*" by port and species}
+
+# what species are landed under council == "*"?
+
+rawdat.sub3 %>% 
+  group_by(SPGRPN2) %>% 
+  filter(council == "*") %>% 
+  summarize(ntickets = n(),
+            sum_revenue = sum(afi_revenue, na.rm = TRUE)) %>% 
+  arrange(sum_revenue)
+
+# where are fish tickets with council == "*" landed?
+
+rawdat.sub3 %>% 
+  group_by(IOPAC) %>% 
+  filter(council == "*") %>% 
+  summarize(ntickets = n(),
+            sum_revenue = sum(afi_revenue, na.rm = TRUE)) %>% 
+  arrange(sum_revenue)
+
+```
 
 ```{r include=FALSE}
 ## clean up space
