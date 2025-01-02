@@ -8,7 +8,7 @@
 #' @param pcid_choose specify an IOPAC port group
 #' @param state_choose specify a US West Coast State
 #' @param year_choose Specify a crab year
-#' @param filter use the `min_vessels` and `min_contribution` objects to filter the data
+#' @param filter_for_conf use the `min_vessels` and `min_contribution` objects to filter the data for confidentiality
 #' @param filter_subgraph a filtering option from the original function that was turned off for Fisher et al.
 #' @param min_vessels the minimum number of vessels participating in a fishery for that fishery to be retained in the network
 #' @param min_contribution the minimum contribution (as a proportion) to total exvessel revenue across all vessels for a fishery to be retained in the network
@@ -20,6 +20,8 @@
 #' close_g <- participation_network_crabyear(close_dat, filter = TRUE, filter_subgraph = FALSE)
 #' @export
 
+
+# code for running function line by line
 tickets <- dat
 
 pcid_choose=iopac
@@ -29,6 +31,8 @@ min_vessels = vessel_cutoff
 min_contribution = contr_cutoff
 min_rev = total_rev_cutoff
 min_rev_indiv = indiv_rev_cutoff
+filter_for_conf = TRUE
+edge_type = "connectivity"
 
 participation_network_crabyear <- function(tickets, edge_type="connectivity", pcid_choose=NA, state_choose = NA, year_choose=NA, filter, filter_subgraph, min_vessels = 3, min_contribution = 0.10, min_rev = 1, min_rev_indiv = 1, write_out, out_dir){
   if(!is.na(state_choose)){
@@ -122,7 +126,7 @@ participation_network_crabyear <- function(tickets, edge_type="connectivity", pc
   
   # process data: drop metiers if fewer than 3 boats participate
   # in any year, and have to be on average (min_contribution*100)% of boats annual revenue
-  if(filter){
+  if(filter_for_conf){
     nb = as.numeric(min_vessels) # changed from 3 to f(x) argument
       percent = as.numeric(min_contribution) # changed from 0.25 to f(x) argument
   }else{

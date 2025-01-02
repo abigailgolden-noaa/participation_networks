@@ -248,7 +248,7 @@ edgetype <- "connectivity"
 
 ```{r eval=TRUE}
 
-
+# code for running loop line by line
 y=2021
 p = "AST"
 iopac = "Astoria"
