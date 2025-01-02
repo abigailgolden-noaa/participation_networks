@@ -236,27 +236,11 @@ Remove fish tickets with an unknown (`UNKNOWN`) OR MISSING (`""` / `MISSING`) ve
 ```{r filter}
 nrows_pre <- dim(rawdat.sub)
 
-
-# options(scipen = 999)
-
-## check proportion of all tickets and revenue with council == "N" and what ports they're landed at
-all_revenue <- sum(rawdat.sub$afi_revenue, na.rm = TRUE)
-rawdat.sub %>% 
-  left_join(
-    port_grps, by = c("pcid" = "PACFIN_PORT_CODE")
-  ) %>%
-  group_by(council
-           , IOPAC
-           ) %>% 
-  summarize(total_revenue = sum(afi_revenue, na.rm = TRUE),
-            pct_total_revenue = total_revenue/all_revenue*100) %>% 
-  filter(council == "N")
-
 rawdat.sub <- rawdat.sub %>%
-  filter(council != "N") %>% 
-  filter(participation_group_code != "A") %>% 
-  filter(fleet != "TI") %>% 
-  filter(drvid != "UNKNOWN") %>%
+  filter(council != "N") %>% # filter out tickets landed in AK and transported to the WC
+  filter(participation_group_code != "A") %>% # filter out aquaculture
+  filter(fleet != "TI") %>% # filter out tribal catch
+  filter(drvid != "UNKNOWN") %>% # filter out missing vessel IDs
   filter(drvid != "") %>%
   filter(drvid != "MISSING")
   
@@ -335,23 +319,23 @@ rawdat.sub3 <- rawdat.sub2 %>%
 
 ```{r explore landings with council == "*" by port and species}
 
-# what species are landed under council == "*"?
-
-rawdat.sub3 %>% 
-  group_by(SPGRPN2) %>% 
-  filter(council == "*") %>% 
-  summarize(ntickets = n(),
-            sum_revenue = sum(afi_revenue, na.rm = TRUE)) %>% 
-  arrange(sum_revenue)
-
-# where are fish tickets with council == "*" landed?
-
-rawdat.sub3 %>% 
-  group_by(IOPAC) %>% 
-  filter(council == "*") %>% 
-  summarize(ntickets = n(),
-            sum_revenue = sum(afi_revenue, na.rm = TRUE)) %>% 
-  arrange(sum_revenue)
+# # what species are landed under council == "*"?
+# 
+# rawdat.sub3 %>% 
+#   group_by(SPGRPN2) %>% 
+#   filter(council == "*") %>% 
+#   summarize(ntickets = n(),
+#             sum_revenue = sum(afi_revenue, na.rm = TRUE)) %>% 
+#   arrange(sum_revenue)
+# 
+# # where are fish tickets with council == "*" landed?
+# 
+# rawdat.sub3 %>% 
+#   group_by(IOPAC) %>% 
+#   filter(council == "*") %>% 
+#   summarize(ntickets = n(),
+#             sum_revenue = sum(afi_revenue, na.rm = TRUE)) %>% 
+#   arrange(sum_revenue)
 
 ```
 
@@ -361,23 +345,13 @@ rm(rawdat.sub2)
 ```
 <br>
 
-Remove non-crab and non-shrimp shellfish (`SPGRPN2 == 65`) per Erin Steiner's recommendation on 12/2/24. She says that aquaculture is sporadically recorded under that species grouping and fish tickets are also created for some other non-commercial sources of revenue, like shellfish growers selling oyster seeds, and these sources of revenue should be excluded from commercial revenue calculations.
-
-```{r}
-
-rawdat.sub4 <- rawdat.sub3 %>% 
-  filter(SPGRPN2 != 65)
-
-```
-
-
 Next, add in an estimated exvessel revenue for commercial fish tickets which have no revenue recorded. To do so, we calculate an average price per pound for each species, for every year / week / port group. Then we create an adjusted `ppp` column for trips without revenue, and calculate the `adj_revenue` by multiplying `adj_ppp * pounds`. 
 
 NOTE FROM JS 010522: MF CHECKED AND THIS PPP CHUNK WORKS PROPERLY
 
 ```{r adjust_revenue}
 ## get the average ppp for each species/year/week/port group, write out 
-ppp_key <- rawdat.sub4 %>%
+ppp_key <- rawdat.sub3 %>%
   filter(afi_ppp > 0) %>%
   group_by(year, tweek, spid_recode, pcgroup) %>%
   summarise(
@@ -386,7 +360,7 @@ ppp_key <- rawdat.sub4 %>%
 if(write_ppp){write.csv(ppp_key, paste0(processdir, "Price_per_Pound_Key_",paste0(years,collapse="-"), ".csv"), row.names=FALSE)}
 
 ## recalculate revenue for each ticket
-rawdat.sub5 <- rawdat.sub4 %>%
+rawdat.sub4 <- rawdat.sub3 %>%
   mutate(
     adj_afi_ppp = ifelse(removal_type_code %in% c("C","D"),
                      ifelse(ppp != 0, afi_ppp, 
@@ -396,7 +370,7 @@ rawdat.sub5 <- rawdat.sub4 %>%
     adj_afi_revenue = ifelse(afi_revenue != 0, afi_revenue, adj_afi_ppp*pounds)
     )
 
-cat("Added in ", sum(!is.na(rawdat.sub5$adj_afi_ppp)) - sum(!is.na(rawdat.sub5$afi_ppp)), " adjusted ppp.") # this is the modified check Jameal put in
+cat("Added in ", sum(!is.na(rawdat.sub4$adj_afi_ppp)) - sum(!is.na(rawdat.sub4$afi_ppp)), " adjusted ppp.") # this is the modified check Jameal put in
 # cat("Added in ", sum(!is.na(rawdat.sub$ppp)) - sum(rawdat.sub$ppp != 0), " adjusted ppp.") # this is the original check Mary wrote
     
 ```
@@ -405,7 +379,6 @@ cat("Added in ", sum(!is.na(rawdat.sub5$adj_afi_ppp)) - sum(!is.na(rawdat.sub5$a
 ```{r include=FALSE}
 ## clean up space
 rm(rawdat.sub3)
-rm(rawdat.sub4)
 ```
 <br>
 
@@ -418,7 +391,7 @@ rm(rawdat.sub4)
 
 for(y in years){
   ## grab data for given year, reorder columns
-  tmp_out <- rawdat.sub5 %>%
+  tmp_out <- rawdat.sub4 %>%
     filter(year == y) %>%
     dplyr::select(c(trip_id, year, tdate,agid, 
                        pcgroup, pcid, IOPAC,
@@ -436,12 +409,12 @@ A crab year is defined as week 46 of year 1 through week 45 of year 2; for examp
 ```{r write_crab, eval=TRUE}
 if(crab_year){
   ## create "crab_year" column
-  rawdat.sub6 <- rawdat.sub5 %>%
+  rawdat.sub5 <- rawdat.sub4 %>%
     mutate(crab_year = ifelse(tweek > 45, year, year - 1))
   ## for each crab year...
   for(y in crab_years){
     ## subset the data frame
-    tmp_out <- rawdat.sub6 %>%
+    tmp_out <- rawdat.sub5 %>%
       filter(crab_year == y) %>%
       dplyr::select(c(trip_id, year, crab_year, tdate,agid, 
                        pcgroup, pcid, IOPAC,
