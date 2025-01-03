@@ -45,8 +45,8 @@ if(!require("ggplot2")) {install.packages("ggplot2")}
 
 And calls the following functions:
 ```{r functions}
-source("R/generate_fishery_matrix.R") # creates matrix of revenue by species group x vessel 
-source("R/generate_diversification_index.R") # creates fishery diversification indices
+source(here::here("R/generate_fishery_matrix.R")) # creates matrix of revenue by species group x vessel 
+source(here::here("R/generate_diversification_index.R")) # creates fishery diversification indices
 
 ```
 
@@ -126,13 +126,9 @@ NOTE: read in fish ticket files with this naming convention: fish_tickets_2004_p
 rundate <- "2024-12-18"
 
 for(y in years){
-  if(y %in% ref_years){
     tmptix <- read.csv(paste0(indir,"/fish_tickets_", y, "_processed_for_networks_",rundate, ".csv"), stringsAsFactors = FALSE) %>%
     filter(IOPAC %in% myports)
-  } else{
-    tmptix <- read.csv(paste0(indir,"/fish_tickets_", y, "_processed_for_networks_",rundate, ".csv"), stringsAsFactors = FALSE) %>%
-    filter(IOPAC %in% myports)
-  }
+    
   if(exists('fishtix')){
     fishtix <- rbind(fishtix, tmptix)
   } else{ fishtix <- tmptix }
@@ -148,3 +144,45 @@ unique(fishtix[which(is.na(fishtix$SPGRPN2)),]$agid)
 unique(fishtix[which(is.na(fishtix$SPGRPN2)),]$pcid)
 
 ```
+
+Make sure that all dates are `Posixt` objects and species group labels are characters.
+```{r}
+#dates_df$odate <- mdy(dates_df$odate)
+fishtix$tdate <- date(parse_date_time(fishtix$tdate, orders=c("ymd", "mdy")))
+fishtix$SPGRPN2 = as.character(fishtix$SPGRPN2)
+```
+<br>
+
+Species group names
+```{r}
+
+#### Read in species group labels key ####
+# formerly this object was named `node_names`
+species_grp_key <- read_csv(here::here(processdir,myfile5),
+                       col_types = list(col_character(), col_character(), col_character()))
+
+```
+<br>
+
+# Calculate fishery diversification indices
+
+We only include vessels that generate >=`$5,000` in total fisheries revenue each year and >=`$500` in revenue from individual fisheries.
+
+```{r cutoffs}
+
+total_rev_cutoff <- 5000
+indiv_rev_cutoff <- 500
+
+```
+<br>
+
+Generate matrix of revenue by species group
+```{r}
+
+mat <- revenue_matrix(tickets = fishtix, matrix_scale = "port", pcid_choose = "Astoria", year_choose = 2019,
+                      filter_for_conf = TRUE, min_vessels = vessel_cutoff, min_contribution = contr_cutoff, 
+                      min_rev = total_rev_cutoff, min_rev_indiv = indiv_rev_cutoff)
+
+
+```
+

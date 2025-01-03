@@ -16,7 +16,9 @@
 #' each column is a species grouping, and values are revenue
 
 
-revenue_matrix <- function(tickets, pcid_choose = NA, year_choose = NA){
+revenue_matrix <- function(tickets, matrix_scale = "coastwide", pcid_choose = NA, year_choose = NA,
+                           filter_for_conf = TRUE, min_vessels = 3, min_contribution = 0.1,
+                           min_rev = 1, min_rev_indiv = 1){
   
   # make sure that the appropriate inputs are included
   if(matrix_scale == "coastwide" & !is.na(pcid_choose)){
