@@ -72,5 +72,17 @@ revenue_matrix <- function(tickets, matrix_scale = "coastwide", pcid_choose = NA
   boats_mat[which(boats_mat<min_rev_indiv)] <- NA
   filtered_boats <- as.data.frame(boats_mat, row.names=rownames(boats_mat), col.names=colnames(boats_mat))
   
+  ##### calculate percent contributions, then remove fisheries with below min_rev_indiv #####
+  # make a new df with annual % revenue from each metier for each boat
+  percent_boats <- boats/rowSums(boats, na.rm = T)
+  percent_boats_mat <- as.matrix(percent_boats)
+  # for each boat, set percent_boats table value as "NA" for fisheries that don't generate at least min_rev_indiv in revenue annually. added 08192021
+  percent_boats_mat[which(boats<min_rev_indiv)] <- NA
+  percent_boats <- as.data.frame(percent_boats_mat, row.names=rownames(percent_boats_mat), col.names=colnames(percent_boats_mat))
+  # for each boat, set filtered_boats table value as "NA" for fisheries that don't generate at least min_rev_indiv in revenue annually.
+  boats_mat <- as.matrix(boats)
+  boats_mat[which(boats_mat<min_rev_indiv)] <- NA
+  filtered_boats <- as.data.frame(boats_mat, row.names=rownames(boats_mat), col.names=colnames(boats_mat))
+  
   return(filtered_boats)
 }

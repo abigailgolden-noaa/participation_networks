@@ -186,3 +186,23 @@ mat <- revenue_matrix(tickets = fishtix, matrix_scale = "port", pcid_choose = "A
 
 ```
 
+
+Generate fishery diversification index for all individual vessels (in a given port) in a given year
+
+1. Calculate `-(p*log(p))` for all cells `p` in the revenue matrix
+2. calculate row sums for all rows (vessels)
+3. exponentiate the row sums to get the Effective Shannon Index (ESI)
+
+```{r}
+
+# step 1
+mat1 <- -(mat*log(mat))
+
+# step 2
+rev_sums <- rowSums(mat1, na.rm = TRUE)
+
+# step 3
+esi <- exp(rev_sums)
+
+```
+
