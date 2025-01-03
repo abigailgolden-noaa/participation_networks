@@ -1,0 +1,51 @@
+---
+title: "Create fishery diversification indices for CEFI analysis"
+author: Abigail Golden
+output: html_document
+date: "2025-01-03"
+
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: '5'
+  pdf_document:
+    highlight: haddock
+    number_sections: yes
+    toc: yes
+    toc_depth: '3'
+geometry: margin=1in
+fontsize: 11pt
+---
+
+# Description
+
+This document generates fishery diversification indices for US West Coast port groups based on vessel-level landings and revenue from fish ticket data.
+
+# Setup
+
+<br>
+```{r "setup", include=FALSE}
+if(!require("here")) {install.packages("here")}
+library(here)
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = here::here())
+
+## start time for full script
+script_start_time <- Sys.time()
+```
+
+<br>
+
+This script requires the following packages. 
+```{r packages, message=FALSE, warning=FALSE}
+if(!require("tidyverse")) {install.packages("tidyverse")}
+if(!require("lubridate")) {install.packages("lubridate")}
+if(!require("ggplot2")) {install.packages("ggplot2")}
+```
+
+And calls the following functions:
+```{r functions}
+source("R/generate_fishery_matrix.R") # creates matrix of revenue by species group x vessel 
+
+```
+
