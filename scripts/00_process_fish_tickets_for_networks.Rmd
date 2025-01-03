@@ -131,7 +131,7 @@ Set a few more user inputs to process the fish tickets
 *If you decide to write out the processed fish ticket data using crab years as time increments (`crab_year=TRUE`), be sure to supply all of the necessary calendar years. For example, if you are processing fish tickets for the 2014 crab year, you will need to read in raw PacFIN fish ticket data for the calendar years 2013 and 2014; if you are processing fish tickets for the 2014 and 2015 crab years, you will need to read in raw PacFIN fish ticket data for calendar years 2014,2015,2016.*
 ```{r inputs}
 ## do you want to write out the fish ticket data as crab years? [TRUE/FALSE]
-crab_year = TRUE
+crab_year = FALSE
 
 ## if crab_year = TRUE, which crab years of fish tickets are you processing? [numeric vector]
 crab_years <- seq(2005,2024)
