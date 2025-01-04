@@ -179,8 +179,7 @@ indiv_rev_cutoff <- 500
 Generate matrix of revenue by species group
 ```{r}
 
-mat <- revenue_matrix(tickets = fishtix, matrix_scale = "port", pcid_choose = "Astoria", year_choose = 2019,
-                      filter_for_conf = TRUE, min_vessels = vessel_cutoff, min_contribution = contr_cutoff, 
+mat <- revenue_matrix(tickets = fishtix, matrix_scale = "coastwide", pcid_choose = NA, year_choose = 2019,
                       min_rev = total_rev_cutoff, min_rev_indiv = indiv_rev_cutoff)
 
 
@@ -195,14 +194,23 @@ Generate fishery diversification index for all individual vessels (in a given po
 
 ```{r}
 
-# step 1
-mat1 <- -(mat*log(mat))
+
+# make a new df with annual % revenue from each species for each boat
+percent_boats <- mat/rowSums(mat, na.rm = T)
+percent_boats_mat <- as.matrix(percent_boats)
+
+# calculate `-(p*log(p))` for all cells `p` in the revenue matrix
+
+mat1 <- -(percent_boats_mat*log(percent_boats_mat))
 
 # step 2
 rev_sums <- rowSums(mat1, na.rm = TRUE)
 
 # step 3
-esi <- exp(rev_sums)
+esi <- as.matrix(exp(rev_sums))
+
+plot(density(esi))
+hist(esi)
 
 ```
 
