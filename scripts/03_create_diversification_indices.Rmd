@@ -46,7 +46,7 @@ if(!require("ggplot2")) {install.packages("ggplot2")}
 And calls the following functions:
 ```{r functions}
 source(here::here("R/generate_fishery_matrix.R")) # creates matrix of revenue by species group x vessel 
-source(here::here("R/generate_diversification_index.R")) # creates fishery diversification indices
+source(here::here("R/calculate_esi.R")) # creates fishery diversification indices
 
 ```
 
@@ -86,10 +86,11 @@ myfile5 <- "spgrpn2_iea_key.csv"
 Identify the years and port groups for which you would like to calculate diversification indices.
 
 ```{r}
-# years
-years <- seq(2004, 2024)
+ref_years <- c(2004,2005)
 
-# IOPAC port groups
+## crab years
+years <- seq(2005, 2024)
+
 ## IOPAC port groups
 myports <- c("Puget Sound","North WA Coast","WA Coast","Other Coastal Washington","Astoria","Tillamook","Columbia River","Newport","Coos Bay","Brookings","Crescent City","Eureka","Morro Bay","Fort Bragg","Bodega Bay","San Francisco","San Diego","Monterey","Santa Barbara","Los Angeles","Unknown Ports" )
 
@@ -126,9 +127,13 @@ NOTE: read in fish ticket files with this naming convention: fish_tickets_2004_p
 rundate <- "2024-12-18"
 
 for(y in years){
-    tmptix <- read.csv(paste0(indir,"/fish_tickets_", y, "_processed_for_networks_",rundate, ".csv"), stringsAsFactors = FALSE) %>%
+  if(y %in% ref_years){
+    tmptix <- read.csv(paste0(indir,"/fish_tickets_crab_", y, "_processed_for_networks_",rundate, ".csv"), stringsAsFactors = FALSE) %>%
     filter(IOPAC %in% myports)
-    
+  } else{
+    tmptix <- read.csv(paste0(indir,"/fish_tickets_crab_", y, "_processed_for_networks_",rundate, ".csv"), stringsAsFactors = FALSE) %>%
+    filter(IOPAC %in% myports)
+  }
   if(exists('fishtix')){
     fishtix <- rbind(fishtix, tmptix)
   } else{ fishtix <- tmptix }
