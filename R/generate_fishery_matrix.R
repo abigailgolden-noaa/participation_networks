@@ -1,7 +1,7 @@
 #' Generate matrix of fishery-specific revenue by vessel or port
 #'
 #' Generate matrix of vessel or port-level participation in each species group
-#' Based on first ~100 lines of the participation_network_crabyear() function
+#' Based on first ~100 lines of the participation_network_crabyear() function from the cciea_networks repo
 #'
 #' @param tickets fish tickets data frame
 #' @param matrix_scale whether to construct a matrix for the entire coast (`"coastwide"`) or specific port (`"port"`)
@@ -10,7 +10,7 @@
 #' @param min_rev the minimum revenue (in dollars) generated from all fisheries for a given vessel in a given year
 #' @param min_rev_indiv the minimum revenue (in dollars) generated from any one fishery for a given vessel in a given year
 #' @return matrix of fishery-specific revenue in a given year, where each row is a vessel,
-#' each column is a species grouping, and values are revenue
+#' each column is a species grouping, and values are annual revenue to that vessel from that species grouping
 
 
 revenue_matrix <- function(tickets, matrix_scale = "coastwide", pcid_choose = NA, year_choose = NA,
