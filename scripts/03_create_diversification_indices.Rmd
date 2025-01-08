@@ -195,22 +195,7 @@ Generate fishery diversification index for all individual vessels (in a given po
 ```{r}
 
 
-# make a new df with annual % revenue from each species for each boat
-percent_boats <- mat/rowSums(mat, na.rm = T)
-percent_boats_mat <- as.matrix(percent_boats)
-
-# calculate `-(p*log(p))` for all cells `p` in the revenue matrix
-
-mat1 <- -(percent_boats_mat*log(percent_boats_mat))
-
-# step 2
-rev_sums <- rowSums(mat1, na.rm = TRUE)
-
-# step 3
-esi <- as.matrix(exp(rev_sums))
-
-plot(density(esi))
-hist(esi)
+esi <- calculate_esi(mat = mat)
 
 ```
 
