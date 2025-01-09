@@ -124,7 +124,7 @@ NOTE: read in fish ticket files with this naming convention: fish_tickets_2004_p
 ```{r}
 
 # date of last fish ticket processing
-rundate <- "2024-12-18"
+rundate <- "2025-01-08"
 
 for(y in years){
   if(y %in% ref_years){
@@ -184,9 +184,15 @@ indiv_rev_cutoff <- 500
 Generate matrix of revenue by species group
 ```{r}
 
-mat <- revenue_matrix(tickets = fishtix, matrix_scale = "coastwide", pcid_choose = NA, year_choose = 2019,
+mat <- revenue_matrix(tickets = fishtix, matrix_scale = "coastwide", matrix_type = "species", pcid_choose = NA, year_choose = 2019,
                       min_rev = total_rev_cutoff, min_rev_indiv = indiv_rev_cutoff)
 
+tickets <- fishtix
+matrix_scale <- "coastwide"
+year_choose <- 2019
+matrix_type <- "species"
+min_rev <- total_rev_cutoff
+min_rev_indiv <- indiv_rev_cutoff
 
 ```
 
