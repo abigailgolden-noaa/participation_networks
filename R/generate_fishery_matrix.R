@@ -36,7 +36,7 @@ revenue_matrix <- function(tickets, matrix_scale = "coastwide", matrix_type = "s
   }
   
   if(matrix_type == "species"){
-    grouping_var <- "SPGRPN2")
+    grouping_var <- "SPGRPN2"
   } else {
     if(matrix_type == "week"){
       grouping_var <- "tweek"
@@ -47,16 +47,16 @@ revenue_matrix <- function(tickets, matrix_scale = "coastwide", matrix_type = "s
   
   # create a df with 2 columns: SPGRPN2 and max_boats, the maximum boats that participated in the fishery during the specified year(s)
   n_boats <- tickets %>% filter(drvid!='NONE') %>%
-    group_by(year, grouping_var) %>%
-    summarise(n_boats = length(unique(drvid)), .groups = "drop") %>%
-    group_by(grouping_var) %>%
+    group_by(year, .data[[grouping_var]]) %>%
+    summarise(n_boats = length(unique(drvid)), .groups = "drop") %>% 
+    group_by(.data[[grouping_var]]) %>%
     summarise(max_boats = max(n_boats), .groups = "drop")
   
   # create a df where each column is a SPGRPN2, and values represent the total revenue for a boat in a year from that SPGRPN2
   boats <- tickets %>% filter(drvid != 'NONE') %>%
-    group_by(drvid, SPGRPN2, year) %>% 
+    group_by(drvid, .data[[grouping_var]], year) %>% 
     summarise(revenue = sum(adj_afi_revenue), .groups = "drop") %>%
-    pivot_wider(names_from=SPGRPN2, values_from=revenue, values_fill = NA)
+    pivot_wider(names_from=matches(grouping_var), values_from=revenue, values_fill = NA)
   boats <- as.data.frame(boats)
   rownames(boats) <- paste(boats$drvid, boats$year, sep="_")
   boats$drvid <- NULL
