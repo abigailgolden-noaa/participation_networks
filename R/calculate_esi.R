@@ -26,6 +26,9 @@ calculate_esi <- function(mat){
 
   # exponentiate
   esi <- as.matrix(exp(rev_sums))
+  outdat <- as.data.frame(esi)
+  colnames(outdat) <- "esi"
+  
   return(esi)
 
  }
