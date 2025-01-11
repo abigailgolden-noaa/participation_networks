@@ -119,7 +119,7 @@ Read in the landings data, from the file containing all fish tickets across port
 
 NOTE: this step takes a while.
 
-NOTE: read in fish ticket files with this naming convention: fish_tickets_2004_processed_for_networks.csv
+NOTE: read in fish ticket files with this naming convention: fish_tickets_crab_2004_processed_for_networks.csv
 
 ```{r}
 
@@ -184,29 +184,42 @@ indiv_rev_cutoff <- 500
 Generate matrix of revenue by species group
 ```{r}
 
-mat <- revenue_matrix(tickets = fishtix, matrix_scale = "coastwide", matrix_type = "species", pcid_choose = NA, year_choose = 2019,
+mat <- revenue_matrix(tickets = fishtix, matrix_scale = "coastwide", matrix_type = "week", pcid_choose = NA, year_choose = 2019,
                       min_rev = total_rev_cutoff, min_rev_indiv = indiv_rev_cutoff)
-
-tickets <- fishtix
-matrix_scale <- "coastwide"
-year_choose <- 2019
-matrix_type <- "species"
-min_rev <- total_rev_cutoff
-min_rev_indiv <- indiv_rev_cutoff
 
 ```
 
 
-Generate fishery diversification index for all individual vessels (in a given port) in a given year
+Generate fishery diversification index for all individual vessels across all ports across all years
 
-1. Calculate `-(p*log(p))` for all cells `p` in the revenue matrix
-2. calculate row sums for all rows (vessels)
-3. exponentiate the row sums to get the Effective Shannon Index (ESI)
 
 ```{r}
 
-
-esi <- calculate_esi(mat = mat)
+for (y in years){
+  for (p in myports){
+    cat(p, "\n")
+    
+    # generate revenue matrix
+    
+    mat <- revenue_matrix(tickets = fishtix, matrix_scale = "port", matrix_type = "species", 
+                          pcid_choose = p, year_choose = y,
+                          min_rev = total_rev_cutoff, min_rev_indiv = indiv_rev_cutoff)
+    
+    # calculate esi
+    
+    tmp_esi <- calculate_esi(mat = mat)
+    
+    tmp_esi$port <- p
+    tmp_esi$year <- y
+    
+    if(exists("spp_divers_index")){
+      spp_divers_index <- rbind(spp_divers_index, tmp_esi)
+    } else {
+      spp_divers_index <- tmp_esi
+    }
+    
+  }
+}
 
 ```
 

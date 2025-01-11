@@ -29,6 +29,6 @@ calculate_esi <- function(mat){
   outdat <- as.data.frame(esi)
   colnames(outdat) <- "esi"
   
-  return(esi)
+  return(outdat)
 
- }
+}
