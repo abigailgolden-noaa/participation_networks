@@ -14,7 +14,7 @@
 #' each column is a species grouping, and values are annual revenue to that vessel from that species grouping
 
 
-revenue_matrix <- function(tickets, matrix_scale = "coastwide", matrix_type = "species", port_choose = NA, year_choose = NA,
+revenue_matrix <- function(tickets, matrix_scale, matrix_type, port_choose = NA, year_choose = NA,
                            min_rev = 1, min_rev_indiv = 1){
   
   # make sure that the appropriate inputs are included
@@ -56,11 +56,7 @@ revenue_matrix <- function(tickets, matrix_scale = "coastwide", matrix_type = "s
   boats$drvid <- NULL
   boats$year <- NULL
   
-  # if statement to handle issue of filters leading to no boats that meet rev cutoffs
-  if(is.null(nrow(boats))==TRUE){
-    return(NA)
-  }
-  
+
   # remove boats that don't generate at least min_rev in revenue annually
   if(any(rowSums(boats,na.rm=T)<min_rev)){boats <- boats[-which(rowSums(boats, na.rm=T)<min_rev),]}
   

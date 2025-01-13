@@ -190,8 +190,8 @@ mat <- revenue_matrix(tickets = fishtix, matrix_scale = "coastwide", matrix_type
 tickets <- fishtix
 matrix_scale <- "port"
 matrix_type <- "week"
-port_choose <- "WA Coast"
-year_choose <- 2005
+p <- "Other Coastal Washington"
+y <- 2005
 min_rev <- total_rev_cutoff
 min_rev_indiv <- indiv_rev_cutoff
 
@@ -210,8 +210,16 @@ for (y in years){
     # generate revenue matrix
     
     mat <- revenue_matrix(tickets = fishtix, matrix_scale = "port", matrix_type = "species", 
-                          pcid_choose = p, year_choose = y,
+                          port_choose = p, year_choose = y,
                           min_rev = total_rev_cutoff, min_rev_indiv = indiv_rev_cutoff)
+    
+    
+    # skip to end of loop if mat is empty bc there are no fish tickets in that year/port combo
+    if(nrow(mat) == 0) 
+      {
+      next
+    }
+  #   paste0("No fish tickets in ",p, " in ", y) }
     
     # calculate esi
     
