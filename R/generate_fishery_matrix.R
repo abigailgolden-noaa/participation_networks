@@ -6,7 +6,7 @@
 #' @param tickets fish tickets data frame
 #' @param matrix_scale whether to construct a matrix for the entire coast (`"coastwide"`) or specific port (`"port"`)
 #' @param matrix_type whether to construct a matrix where the columns are species groups (`"species"`) or week of the crab year (`"week"`)
-#' @param pcid_choose specify an IOPAC port group (only needs to be specified if `matrix_scale == "port`; will produce an error otherwise)
+#' @param port_choose specify an IOPAC port group (only needs to be specified if `matrix_scale == "port`; will produce an error otherwise)
 #' @param year_choose Specify a year
 #' @param min_rev the minimum revenue (in dollars) generated from all fisheries for a given vessel in a given year
 #' @param min_rev_indiv the minimum revenue (in dollars) generated from any one fishery for a given vessel in a given year
@@ -14,25 +14,25 @@
 #' each column is a species grouping, and values are annual revenue to that vessel from that species grouping
 
 
-revenue_matrix <- function(tickets, matrix_scale = "coastwide", matrix_type = "species", pcid_choose = NA, year_choose = NA,
+revenue_matrix <- function(tickets, matrix_scale = "coastwide", matrix_type = "species", port_choose = NA, year_choose = NA,
                            min_rev = 1, min_rev_indiv = 1){
   
   # make sure that the appropriate inputs are included
-  if(matrix_scale == "coastwide" & !is.na(pcid_choose)){
+  if(matrix_scale == "coastwide" & !is.na(port_choose)){
     stop("ERROR: An IOPAC port should not be specified for coastwide matrices")
   }
-  if(matrix_scale == "port" & is.na(pcid_choose)){
+  if(matrix_scale == "port" & is.na(port_choose)){
     stop("ERROR: An IOPAC port must be specified for port-level matrix construction")
   }
 
   
   # filter data by year (coastwide matrices) or year and port (port-level matrices)
-  if(matrix_scale == "coastwide" & is.na(pcid_choose)){
+  if(matrix_scale == "coastwide" & is.na(port_choose)){
     tickets <- dplyr::filter(tickets, year %in% year_choose)
   }
   
-  if(matrix_scale == "port" & (!is.na(pcid_choose))){
-    tickets <- dplyr::filter(tickets, year %in% year_choose & IOPAC %in% pcid_choose)
+  if(matrix_scale == "port" & (!is.na(port_choose))){
+    tickets <- dplyr::filter(tickets, year %in% year_choose & IOPAC %in% port_choose)
   }
   
   if(matrix_type == "species"){
@@ -45,13 +45,7 @@ revenue_matrix <- function(tickets, matrix_scale = "coastwide", matrix_type = "s
     }
   }
   
-  # create a df with 2 columns: SPGRPN2 and max_boats, the maximum boats that participated in the fishery during the specified year(s)
-  n_boats <- tickets %>% filter(drvid!='NONE') %>%
-    group_by(year, .data[[grouping_var]]) %>%
-    summarise(n_boats = length(unique(drvid)), .groups = "drop") %>% 
-    group_by(.data[[grouping_var]]) %>%
-    summarise(max_boats = max(n_boats), .groups = "drop")
-  
+
   # create a df where each column is a SPGRPN2, and values represent the total revenue for a boat in a year from that SPGRPN2
   boats <- tickets %>% filter(drvid != 'NONE') %>%
     group_by(drvid, .data[[grouping_var]], year) %>% 

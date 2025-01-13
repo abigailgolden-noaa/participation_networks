@@ -184,8 +184,16 @@ indiv_rev_cutoff <- 500
 Generate matrix of revenue by species group
 ```{r}
 
-mat <- revenue_matrix(tickets = fishtix, matrix_scale = "coastwide", matrix_type = "week", pcid_choose = NA, year_choose = 2019,
+mat <- revenue_matrix(tickets = fishtix, matrix_scale = "coastwide", matrix_type = "week", port = NA, year = 2019,
                       min_rev = total_rev_cutoff, min_rev_indiv = indiv_rev_cutoff)
+
+tickets <- fishtix
+matrix_scale <- "port"
+matrix_type <- "week"
+port_choose <- "WA Coast"
+year_choose <- 2005
+min_rev <- total_rev_cutoff
+min_rev_indiv <- indiv_rev_cutoff
 
 ```
 
