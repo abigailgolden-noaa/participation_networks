@@ -239,3 +239,27 @@ for (y in years){
 
 ```
 
+Do some exploratory plotting
+```{r}
+
+spp_divers_index <- tibble::rownames_to_column(spp_divers_index, "drvid")
+
+sum_divers_index <- spp_divers_index %>% 
+  group_by(port, year) %>% 
+  summarize(mean_esi = mean(esi))
+
+
+# plot mean fishery diversification index of 
+
+ggplot(data = sum_divers_index, aes(x = year, y = esi))+
+  geom_line(aes(x = year, y = mean_esi))+
+  facet_wrap(~port)+
+  theme_bw()
+
+
+
+
+
+
+```
+

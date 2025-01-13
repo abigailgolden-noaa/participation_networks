@@ -52,7 +52,7 @@ revenue_matrix <- function(tickets, matrix_scale, matrix_type, port_choose = NA,
     summarise(revenue = sum(adj_afi_revenue), .groups = "drop") %>%
     pivot_wider(names_from=matches(grouping_var), values_from=revenue, values_fill = NA)
   boats <- as.data.frame(boats)
-  rownames(boats) <- paste(boats$drvid, boats$year, sep="_")
+  rownames(boats) <- boats$drvid
   boats$drvid <- NULL
   boats$year <- NULL
   
