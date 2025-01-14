@@ -199,7 +199,7 @@ min_rev_indiv <- indiv_rev_cutoff
 
 
 Generate fishery diversification index for all individual vessels across all ports across all years
-
+This code filters by year, then port, then calculates ESI at the vessel level, but only for landings at a given port in a given year
 
 ```{r}
 
@@ -238,6 +238,55 @@ for (y in years){
 }
 
 ```
+
+
+Generate fishery diversification index for all vessels across all years
+This code filters by year and then calculates ESI at the vessel level, so it captures a vessel's entire fishery portfolio. Then, it calculates the mean diversification index for all vessels that landed in a given port in a given year to give port-level diversification indices
+
+```{r}
+
+for (y in years){
+    cat(y, "\n")
+    
+    # generate revenue matrix
+    
+    mat <- revenue_matrix(tickets = fishtix, matrix_scale = "coastwide", matrix_type = "species", 
+                          port_choose = NA, year_choose = y,
+                          min_rev = total_rev_cutoff, min_rev_indiv = indiv_rev_cutoff)
+    
+    
+    # skip to end of loop if mat is empty bc there are no fish tickets in that year/port combo
+    if(nrow(mat) == 0) 
+      {
+      next
+    }
+  #   paste0("No fish tickets in ",p, " in ", y) }
+    
+    # calculate esi
+    
+    tmp_esi <- calculate_esi(mat = mat)
+    
+    tmp_esi$year <- y
+    
+    if(exists("coastwide_divers_index")){
+      coastwide_divers_index <- rbind(coastwide_divers_index, tmp_esi)
+    } else {
+      coastwide_divers_index <- tmp_esi
+
+    
+  }
+}
+
+
+ggplot(data = coastwide_divers_index)+
+  geom_histogram(aes(x = esi), binwidth = 0.25)+
+  facet_wrap(~year)
+
+# identify all vessels that land in a given port in each year
+
+
+```
+
 
 Do some exploratory plotting
 ```{r}
