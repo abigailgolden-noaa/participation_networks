@@ -1,0 +1,413 @@
+---
+title: "Sensitivity Index code"
+output: html_document
+date: "2024-12-31"
+author: "Amanda Phillips"
+---
+
+
+
+```{r include=FALSE}
+library(tidyverse)
+library(plyr)
+library(ggthemes)
+library(cowplot)
+library(viridis)
+library(kableExtra) # create data tables
+library(scales) #commas for axes in ggplot 
+library(ggpubr) #ggarrange()
+library(ggrepel)
+library(vegan)
+library(zoo)
+library(fmsb)
+library(paletteer)
+library(GGally)
+library(nord)
+
+```
+
+```{r include = FALSE}
+knitr::opts_chunk$set(fig.path='./Figures/', echo= F, warning= F, message= F, dev = 'png')
+options(ggrepel.max.overlaps = Inf)
+extrafont::loadfonts(device="win")
+
+theme_set(theme_tufte())
+```
+
+1. Read in landings data and iopac data
+- Data manipulation:
+ -- Set revenue to millions
+ -- Restrict included years
+ -- convert 0's to 0.000000000001 for division purposes. 
+
+```{r include=FALSE}
+#read in landings data
+landings_iopac_mgrp <- readRDS(file = "./Data/landings_iopac_mgrp_crabyr.RDS")
+db <- landings_iopac_mgrp %>%
+  mutate(AFI_REV_m = AFI_REV/1000000) %>% # convert landings to millions
+  filter(CRAB_YEAR >1981 & CRAB_YEAR < 2021) %>%  # restrict landings years
+ mutate(IOPAC_PORT_GROUP = case_when(IOPAC_PORT_GROUP == 'SOUTH AND CENTRAL WA COAST' ~ 'WA COAST',
+                                                                T ~ IOPAC_PORT_GROUP))
+
+db[db==0] <- .000000000001 # convert 0's to near 0's for index calculation
+
+```
+
+2. Join geographic data to landings data (IOPAC + landings)
+
+
+```{r include=FALSE}
+
+
+# read in iopac data
+iopac <- read_csv('./Data/iopac_lat-long-r.csv')
+iopac$IOPAC_PORT_GROUP <- toupper(iopac$IOPAC_PORT_GROUP)
+
+db <- db %>% left_join(iopac) %>%
+  filter(IOPAC_PORT_GROUP != 'NOT_DESIGNATED') %>%
+  arrange(desc(PRIMARY_LATITUDE)) %>%
+  mutate(IOPAC_PORT_GROUP = factor(IOPAC_PORT_GROUP, levels = unique(IOPAC_PORT_GROUP)))
+
+db_ma <- db %>% filter(MANAGEMENT_GROUP_CODE == 'TOTAL') %>%
+    group_by(IOPAC_PORT_GROUP) %>%
+  mutate(rm_REV = rollmean(AFI_REV_m, 3, fill = NA, align = "right")) # calculate rolling mean for previous three years 
+
+db_full <- db %>%
+  filter(!IOPAC_PORT_GROUP %in% c('NOT_DESIGNATED', 'COASTWIDE') & MANAGEMENT_GROUP_CODE != 'TOTAL') %>%
+  group_by(IOPAC_PORT_GROUP, CRAB_YEAR, PRIMARY_LATITUDE) %>% 
+  mutate(total_revenue = sum(AFI_REV_m)) %>% # calculate total revenue by port and year
+  ungroup() %>% 
+  group_by(IOPAC_PORT_GROUP, CRAB_YEAR, MANAGEMENT_GROUP_CODE, PRIMARY_LATITUDE) %>% 
+  mutate(mngmt_revenue = sum(AFI_REV_m, na.rm = TRUE), # calculate total revenue by year, port and management group 
+         percent_total = mngmt_revenue/total_revenue)  %>% 
+  ungroup() %>% 
+  group_by(IOPAC_PORT_GROUP, MANAGEMENT_GROUP_CODE)
+
+
+lats <- iopac %>% select(IOPAC_PORT_GROUP, PRIMARY_LATITUDE) # create table with latitude information for future table
+
+# region <- db_full %>% ungroup() %>% select(IOPAC_PORT_GROUP, REGION)
+
+```
+
+```{r}
+
+fisheries_summary <- db %>% filter(CRAB_YEAR == 2019) %>% dplyr::group_by(MANAGEMENT_GROUP_CODE) %>% dplyr::summarize(ann_rev = sum(AFI_REV_m)) %>% 
+  mutate(MANAGEMENT_GROUP_CODE = case_when(MANAGEMENT_GROUP_CODE == 'TOTAL' ~ 'AFSH', T ~ MANAGEMENT_GROUP_CODE))
+
+fs <- fisheries_summary %>% left_join(mc) 
+
+```
+
+```{r, fig.height = 6, fig.width = 8}
+
+fisheries_summary <- db %>% filter(CRAB_YEAR >= 2000 & CRAB_YEAR <= 2012) %>% dplyr::group_by(MANAGEMENT_GROUP_CODE, CRAB_YEAR) %>% dplyr::summarize(ann_rev = sum(AFI_REV_m)) %>% filter(MANAGEMENT_GROUP_CODE != 'TOTAL')
+
+fs <- fisheries_summary %>% left_join(mc) 
+k <- nord("algoma_forest", 7, reverse = T)
+
+fs_plot <- ggplot(fs, aes(x=CRAB_YEAR,y=ann_rev,color=MANAGEMENT_NAME_COMBINED)) + 
+  annotate("rect",xmin=2007,xmax=2008,ymin=0,ymax=Inf,alpha=0.2,fill="#4c556a") +
+  annotate("rect",xmin=2005,xmax=2007,ymin=0,ymax=Inf,alpha=0.2,fill="#D8DEE9") + 
+  geom_line(size = 1.25) + 
+  geom_point(size = 2) +
+  geom_text_repel(seed = 42, data = subset(fs, CRAB_YEAR == 2012), aes(x=CRAB_YEAR, y = ann_rev, label= MANAGEMENT_NAME_COMBINED), size = 2.75, nudge_x = 1, show.legend = FALSE, xlim  = c(2012, NA)) +
+  scale_color_discrete(name="Management Group Code") + 
+  theme_tufte(ticks = T) +
+  theme(legend.position = "none") + 
+  ylab("Real Revenue (millions of $s)") +
+  xlab("") + 
+  scale_color_manual(values = k) +
+  scale_x_continuous(breaks=c(2000:2012), expand = expansion(mult = c(0, 0.3)))
+
+fs_plot
+
+
+```
+
+
+```{r include = FALSE}
+# create a variety of vectors for labeling tables and figures
+
+variables <- c('AFI_REV_m', 'NUM_VESSELS', 'NUM_DEALERS')
+
+iopac_ports <- unique(db$IOPAC_PORT_GROUP) 
+region <- unique(db$REGION)
+mgmt <- unique(db$MANAGEMENT_GROUP_CODE)
+
+shock <-  c('E1', 'E2', 'E3', 'E4', 'E5', 'M1', 'M3', 'M2') # shorthand code for the different shocks identified in the paper
+category <-  c('Ecological', 'Ecological', 'Ecological', 'Ecological', 'Ecological',  
+             'Management', 'Management', 'Management') # Type of shock
+type <-  c('El Nino', 'El Nino', 'El Nino', 'El Nino', 'Marine Heat Wave', 
+         'Vessel Buyback', 'Catch Share Implementation', 'Southern California Current Salmon Closures') # specific shock long title
+duration <-  c('1986 - 1988', '1991 - 1992', '1997 - 1998', '1998 - 1999', '2015 -2016', 
+             '2003 - 2004', '2011 - 2012', '2008 - 2010') # time range for shocks
+first_year <-  c(1986, 1991, 1997, 1998, 2015, 2003, 2011, 2008) # first year for each shock
+end_year <-  c(1988, 1992, 1998, 1999, 2016, 2004, 2012, 2010) # last year for each shock 
+
+shock_table <- data.frame(Shock_id = shock, 
+                          Category = category,
+                          Shock = type,
+                          Duration = duration,
+                          Start_year = first_year,
+                          End_year = end_year) %>% 
+   arrange(Shock_id) # create a table with the metadata for all shock scenarios, combining above vectors 
+
+shock_table
+
+```
+
+```{r}
+stk <- shock_table %>% select(Shock, Duration) %>% 
+  kable() %>% 
+  pack_rows(
+  index = c("Ecological" = 5, "Management" = 3)) %>% 
+  row_spec(0, font_size = 20) %>% 
+  kable_classic(full_width = F, html_font = "Cambria") 
+
+  # save_kable(file = "shock_table.png", self_contained = T)
+
+stk
+```
+## Sensitivity Calculations: 
+
+* Year prior to shock date uses average of 3 years prior to shock beginning to calculate sensitivity index
+* value less than -1 is highly sensitive, value greater than -1 is low sensitivity. 
+
+
+The year prior value for this sheet is the year prior to the first year listed in the shock scenario: 
+
+* for the 1991-1992 El Nino shock:
+year prior = average of 1990, 1989, 1988 revenue values
+shock year = 1992 revenue values
+
+```{r include=FALSE}
+# create function to calculate the index for a given shock - takes the label "shock" as determined in the shock table listed above 
+
+PCDiD_index <- function(shock) {
+  st <- shock_table %>% filter(Shock_id == shock)
+  year_prior <- st$Start_year - 1 # designate year prior to the shock 
+  
+  py_rev <- db_ma %>% filter(CRAB_YEAR == year_prior) %>% select(IOPAC_PORT_GROUP, rm_REV) # create prior year datatable with only data from the year prior to the shock, with port group and rolling mean for revenue 
+  sy_rev <- db_ma %>% filter(CRAB_YEAR == st$Start_year) %>% select(IOPAC_PORT_GROUP, AFI_REV_m) # create datatable with only data from the start year of the shock, using revenue from that year (not rolling mean)
+  
+  rev_tbl <- merge(py_rev, sy_rev) # combine the prior year table and start year table 
+  
+  cw_yearprior <- rev_tbl[rev_tbl$IOPAC_PORT_GROUP == 'COASTWIDE', 'rm_REV'] # isolate the coastwide revenue for prior years
+  cw_yearshock <- rev_tbl[rev_tbl$IOPAC_PORT_GROUP == 'COASTWIDE', 'AFI_REV_m'] # isolate the coastwide revenue for start year
+  
+  
+  si_tbl <- rev_tbl %>% 
+  mutate(index_type = 'PCDiD',
+         port_diff = (AFI_REV_m - rm_REV), # calculate the difference between the prior rolling mean revenue and start year mean revenue for each port
+         change_in_port = (AFI_REV_m - rm_REV) / rm_REV, # calculate the change in difference between start year mean revenue and rolling mean in port
+         cw_diff = cw_yearshock - cw_yearprior, # calculate the coastwide difference in revenue for prior years and start year
+         change_in_cw = (cw_yearshock - cw_yearprior) / cw_yearprior,  # calculate the change in coastwide difference for start year mean revenue and prior year revenue
+         sensitivity_index = (AFI_REV_m/cw_yearshock) - (rm_REV/cw_yearprior), # calculate the sensitivity index using the port start revenue/coastwide start year revenue - port prior year revenue/coastwide prior year revenue
+         Shock_id = shock) %>% 
+    left_join(st) %>% 
+    mutate(shock_description = paste(Duration, ": ", Shock))
+  
+  return(si_tbl)
+} 
+
+
+```
+
+```{r include=FALSE}
+
+index_table <- bind_rows(lapply(shock, PCDiD_index)) %>% # apply the sensitivity function for all shock scenarios
+  mutate(port_change_description = case_when(port_diff > 1 ~ "revenue gain", 
+                                             port_diff < 1 ~ "revenue loss", 
+                                             port_diff == 1 ~ "no change")) %>% 
+  left_join(lats)
+
+# write_rds(index_table, './table_allindextypes.RDS')
+
+si_ports <- index_table 
+si_ports
+
+```
+
+
+
+```{r}
+
+
+db_revenue <- db %>% filter(MANAGEMENT_GROUP_CODE != 'TOTAL') %>%  
+  select(CRAB_YEAR, IOPAC_PORT_GROUP, MANAGEMENT_GROUP_CODE, AFI_REV_m) # create df with revenue for each management group by port
+
+db_revenue_w <- db_revenue %>% # create wide version of above table
+  pivot_wider(names_from = MANAGEMENT_GROUP_CODE, values_from = AFI_REV_m)
+
+
+```
+
+
+
+```{r}
+
+dbr <- db_revenue %>% group_by(MANAGEMENT_GROUP_CODE, IOPAC_PORT_GROUP) %>% # prepare table to create shannon index
+  mutate(rm_REV = rollmean(AFI_REV_m, 3, fill = NA, align = "right")) %>% 
+  select(CRAB_YEAR, IOPAC_PORT_GROUP, MANAGEMENT_GROUP_CODE, rm_REV) %>% 
+  pivot_wider(names_from = MANAGEMENT_GROUP_CODE, values_from = rm_REV) %>% 
+  filter(!is.na(CPEL))
+
+shannon_s <- ddply(dbr, CRAB_YEAR~IOPAC_PORT_GROUP,function(x) { # calculate shannon index
+     data.frame(SHANNON_revenue=diversity(x[-2], index="shannon")) }) 
+
+shannon_db <- shannon_s %>% # clean up shannon table
+  left_join(lats) %>% 
+  arrange(PRIMARY_LATITUDE) %>% 
+  mutate(IOPAC_PORT_GROUP = factor(IOPAC_PORT_GROUP, levels = unique(IOPAC_PORT_GROUP)))
+
+
+# saveRDS(shannon_db, './data/shannon_db.RDS')
+```
+
+
+## Shannon Index
+ 
+ * x-axis: shannon diversity index for the year n-1 of the shock, where shannon indices are calculated using 3 year rolling averages
+ * y-axis: sensitivity index 
+ * each point represents a single port with matching shannon index and sensitivity index for a given shock
+
+ 
+
+```{r}
+region_db <- db %>% ungroup() %>% select(IOPAC_PORT_GROUP, REGION) %>% distinct()
+
+
+yr <- si_ports %>% 
+  select(Start_year, End_year, shock_description, Category) %>% 
+  distinct() %>%
+  mutate(Length = 1.5, year_prior = Start_year -1.5, year_post = End_year + .5, year_mid = (Start_year + End_year)/2) 
+
+sh_sens <- si_ports %>% filter(IOPAC_PORT_GROUP != 'COASTWIDE') %>% 
+    mutate(Year_prior = Start_year) %>% 
+    left_join(shannon_db, by = c(c(IOPAC_PORT_GROUP = 'IOPAC_PORT_GROUP'), c(Start_year = 'CRAB_YEAR'))) %>% 
+    left_join(region_db) 
+
+sh_sens$REGION <- factor(sh_sens$REGION, level = c('Washington', 'Oregon', 'Northern California', 'Southern California'))
+
+avg_sh_c <- mean(sh_sens$SHANNON_revenue, na.rm = TRUE) + sd(sh_sens$SHANNON_revenue, na.rm = TRUE)
+# avg_sh <- 1.59
+
+
+```
+
+# Figure for shannon Index
+
+```{r, shannonrev_ts, fig.height = 4, fig.width = 18}
+scatter_plot_r2 <- sh_sens %>% ggplot() +
+  # geom_rect(aes(xmin = 0, xmax = 0.4, ymin = -1, ymax = 10), fill = 'green', alpha = 0.05) +
+  geom_point(aes(x = SHANNON_revenue, y = sensitivity_index)) +
+  geom_hline(yintercept = 0 ) +
+  geom_smooth(aes(x = SHANNON_revenue, y = sensitivity_index, color = Category, fill = Category)) +
+  ggtitle('Shannon Index of Diversity and Sensitivy Index by Shock') +
+  facet_grid(cols = vars(Shock)) +
+    xlab("Shannon Index") +
+  scale_color_manual(values=c('Ecological' = "#8D9E7C", 'Management' = '#9EAFBF'), name = "") +
+  scale_fill_manual(values=c('Ecological' = "#8D9E7C", 'Management' = '#9EAFBF'), name = "") +
+  ylab("Sensitivity Index")
+#
+
+scatter_plot_r2
+```
+
+
+## Visualizing sensitivity based on shocks
+* These figures all attempt to gauge the range of sensitivity for a given shock
+
+
+
+## Lollipop chart - by shock
+
+
+**fig 3.2 sensitivity for port by shock -lollipop**
+
+```{r sensitivity_comb, fig.height = 12, fig.width = 14}
+
+vp_df <- si_ports %>% dplyr::select(-shock_description) 
+
+si_ports <- si_ports %>% arrange(PRIMARY_LATITUDE) %>% 
+  mutate(IOPAC_PORT_GROUP = factor(IOPAC_PORT_GROUP, levels = unique(IOPAC_PORT_GROUP)))
+
+si_ports <- si_ports %>% mutate(IOPAC_PORT_GROUP_LC = str_to_title(IOPAC_PORT_GROUP),
+                                IOPAC_PORT_GROUP_TT = case_when(IOPAC_PORT_GROUP_LC == "Wa Coast" ~ "WA Coast",
+                                                                IOPAC_PORT_GROUP_LC == "North Wa Coast" ~ "North WA Coast",
+                                                                T ~ IOPAC_PORT_GROUP_LC)) %>%  # rename port groups for figures 
+  arrange(PRIMARY_LATITUDE) %>% 
+  mutate(IOPAC_PORT_GROUP_TT = factor(IOPAC_PORT_GROUP_TT, levels = unique(IOPAC_PORT_GROUP_TT))) %>% filter(IOPAC_PORT_GROUP_TT != 'Coastwide')
+
+
+
+
+SI_ll <- si_ports %>%  filter(Category == 'Ecological') %>% 
+  filter(!IOPAC_PORT_GROUP %in% c('NOT_DESIGNATED')) %>% # filter out na's 
+  ggplot(aes(x = sensitivity_index, y = IOPAC_PORT_GROUP_TT)) +
+  geom_point(aes(color = port_change_description, fill = port_change_description), size=3, alpha=0.7, stroke = 2) +
+  geom_segment(aes(y=IOPAC_PORT_GROUP_TT, yend=IOPAC_PORT_GROUP_TT, x=0, xend=sensitivity_index), color = "grey40", size = .75) +
+  geom_vline(xintercept = 0) +
+  facet_wrap(~shock_description, nrow = 1, labeller = label_wrap_gen(14)) +
+  scale_color_manual(values=c('revenue loss' = "#D08770", 'revenue gain' = '#647D64'), name = "", labels = c('revenue loss' = "Loss in Revenue",  'revenue gain' = "Gain in Revenue")) +
+  scale_fill_manual(values=c('revenue loss' = "#D08770", 'revenue gain' = '#647D64'), name = "", labels = c('revenue loss' = "Loss in Revenue",  'revenue gain' = "Gain in Revenue")) +
+  theme(panel.grid.major.y = element_line(colour = "grey95"),
+        strip.background = element_blank(), 
+        axis.text = element_text(size = 14, family = "serif", color = "black"), 
+        strip.text = element_text(size= 14),
+        #strip.text.x = element_blank(),
+        axis.title.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        legend.position = "bottom") +
+    xlab("Relative Stability Index") 
+
+SI_ll
+
+```
+
+## Salmon depreciation figures
+
+```{r, fig.width = 6, fig.height = 6}
+
+salmon_dep <- db %>% filter(IOPAC_PORT_GROUP != "COASTWIDE" & MANAGEMENT_GROUP_CODE != "TOTAL" &
+                              CRAB_YEAR %in% c(2000:2007)) %>%
+                group_by(IOPAC_PORT_GROUP,CRAB_YEAR) %>% mutate(total=sum(AFI_REV_m),share=AFI_REV_m/total) %>%
+                   filter(MANAGEMENT_GROUP_CODE == "SAMN") %>% 
+                     group_by(IOPAC_PORT_GROUP) %>% dplyr::summarise(samn_dep=quantile(share,probs=0.5,na.rm=T)*100) %>% 
+    mutate(IOPAC_PORT_GROUP_LC = str_to_title(IOPAC_PORT_GROUP),
+                                IOPAC_PORT_GROUP_TT = case_when(IOPAC_PORT_GROUP_LC == "Wa Coast" ~ "WA Coast",
+                                                                IOPAC_PORT_GROUP_LC == "North Wa Coast" ~ "North WA Coast",
+                                                                T ~ IOPAC_PORT_GROUP_LC))
+ 
+
+sens <- index_table %>% filter(Shock_id =="M2") %>% 
+           ungroup() %>% select(IOPAC_PORT_GROUP,sensitivity_index)
+
+salmon_dep_df <- salmon_dep %>% left_join(sens,by=c("IOPAC_PORT_GROUP")) %>% 
+  mutate(geographic_exposure = case_when(IOPAC_PORT_GROUP %in% c('BODEGA BAY', 'MORRO', 'SAN FRANCISCO', 'MONTEREY', 'SANTA BARBARA', 'LOS ANGELES', 'SAN DIEGO') ~"High Exposure",
+                                                                                                                 IOPAC_PORT_GROUP %in% c('FORT BRAGG', 'COOS BAY') ~"Medium Exposure",
+                                                                                                                 IOPAC_PORT_GROUP %in% c('PUGET SOUND', 'NORTH WA COAST', 'TILLAMOOK', 'NEWPORT', 'ASTORIA', 
+                                                                                                                                         'WA COAST') ~"No Exposure",
+                                                                                                                 T ~ "exclude")) %>% 
+  filter(geographic_exposure != 'exclude')
+
+
+max_dep <- max(salmon_dep_df$samn_dep)/2
+
+
+ggplot(salmon_dep_df,aes(x=samn_dep,y=sensitivity_index,label=IOPAC_PORT_GROUP_TT)) +
+  geom_hline(yintercept = 0, color = "gray80") +
+  geom_vline(xintercept = max_dep, color = "gray80") +
+  geom_point(aes(color = geographic_exposure, shape = geographic_exposure), size = 3.25, alpha = 0.65) +
+  geom_text_repel(seed = 42, size = 2.5, box.padding = 0.45, point.padding = .25, nudge_y = -.003, segment.alpha = 0.25, min.segment.length = 0, family = "sans") +
+  geom_label(aes(x = 0, y = 0.05, label = "High Resilience, Low Salmon Dependence"), size = 3, hjust = "inward", family = "serif") +
+  geom_label(aes(x = 20, y = 0.05, label = "High Resilience, High Salmon Dependence"), size = 3, hjust = "outward", family = "serif") +
+  geom_label(aes(x = 0, y = -0.02, label = "Low Resilience, Low Salmon Dependence"), size = 3, hjust = "inward", family = "serif") +
+  geom_label(aes(x = 20, y = -0.02, label = "Low Resilience, High Salmon Dependence"), size = 3, hjust = "outward", family = "serif") +
+  scale_color_manual(values= nord("red_mountain", 3), name = "Geographic Exposure") +
+  scale_shape_manual(values=c(17, 15, 16), name = "Geographic Exposure")+
+  theme(legend.position = "bottom") +
+  labs(y = 'Relative Stability Index', x = 'Salmon Dependence') 
+
+```
