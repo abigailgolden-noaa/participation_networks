@@ -9,7 +9,6 @@ author: "Amanda Phillips"
 
 ```{r include=FALSE}
 library(tidyverse)
-library(plyr)
 library(ggthemes)
 library(cowplot)
 library(viridis)
@@ -41,11 +40,25 @@ theme_set(theme_tufte())
  -- convert 0's to 0.000000000001 for division purposes. 
 
 ```{r include=FALSE}
+
+# directories
+out_conf_dir <- "/Users/abigail.golden/Desktop/Research/24 - CEFI/data/fish_tickets/processed/"
+processdir <- "data/input"
+
+# file names
+myfile2 <- 'fish tickets 2004-2024 121724.rds' # latest pull from PacFIN 12-09-2024
+myfile3 <- "iopac_conversion_table.csv"
+
 #read in landings data
-landings_iopac_mgrp <- readRDS(file = "./Data/landings_iopac_mgrp_crabyr.RDS")
-db <- landings_iopac_mgrp %>%
-  mutate(AFI_REV_m = AFI_REV/1000000) %>% # convert landings to millions
-  filter(CRAB_YEAR >1981 & CRAB_YEAR < 2021) %>%  # restrict landings years
+rawdat <- read_rds(paste0(out_conf_dir,myfile2))
+
+# read in iopac data
+port_grps <- read_csv(here::here(processdir,myfile3))
+
+
+# landings_iopac_mgrp <- readRDS(file = "./Data/landings_iopac_mgrp_crabyr.RDS")
+db <- rawdat %>%
+  mutate(AFI_REV_m = AFI_EXVESSEL_REVENUE/1000000) %>% # convert landings to millions
  mutate(IOPAC_PORT_GROUP = case_when(IOPAC_PORT_GROUP == 'SOUTH AND CENTRAL WA COAST' ~ 'WA COAST',
                                                                 T ~ IOPAC_PORT_GROUP))
 
@@ -63,12 +76,20 @@ db[db==0] <- .000000000001 # convert 0's to near 0's for index calculation
 iopac <- read_csv('./Data/iopac_lat-long-r.csv')
 iopac$IOPAC_PORT_GROUP <- toupper(iopac$IOPAC_PORT_GROUP)
 
-db <- db %>% left_join(iopac) %>%
-  filter(IOPAC_PORT_GROUP != 'NOT_DESIGNATED') %>%
-  arrange(desc(PRIMARY_LATITUDE)) %>%
-  mutate(IOPAC_PORT_GROUP = factor(IOPAC_PORT_GROUP, levels = unique(IOPAC_PORT_GROUP)))
 
-db_ma <- db %>% filter(MANAGEMENT_GROUP_CODE == 'TOTAL') %>%
+
+db.1 <- db %>% 
+  left_join(port_grps) %>% 
+  filter(IOPAC != "Unknown Ports") %>% #filter out tickets not associated with an IOPAC port
+  arrange(desc(PRIMARY_LATITUDE)) %>% # arrange latitudinally
+  mutate(IOPAC_PORT_GROUP = factor(IOPAC_PORT_GROUP, levels = unique(IOPAC_PORT_GROUP))) # make IOPAC a factor variable
+
+# db <- db %>% left_join(port_grps) %>%
+#   filter(IOPAC_PORT_GROUP != 'NOT_DESIGNATED') %>%
+#   arrange(desc(PRIMARY_LATITUDE)) %>%
+#   mutate(IOPAC_PORT_GROUP = factor(IOPAC_PORT_GROUP, levels = unique(IOPAC_PORT_GROUP)))
+
+db_ma <- db %>% filter(MANAGEMENT_GROUP_CODE == 'TOTAL') %>% # this is a species group code
     group_by(IOPAC_PORT_GROUP) %>%
   mutate(rm_REV = rollmean(AFI_REV_m, 3, fill = NA, align = "right")) # calculate rolling mean for previous three years 
 
