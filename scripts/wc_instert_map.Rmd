@@ -1,0 +1,337 @@
+---
+title: "WC inset map"
+author: "Amanda Phillips"
+date: "2023-01-25"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r include=FALSE}
+library(ggplot2)
+library(tidyverse)
+library(plyr)
+library(ggthemes)
+library(cowplot)
+library(viridis)
+library(kableExtra) # create data tables
+library(scales) #commas for axes in ggplot 
+library(ggpubr) #ggarrange()
+library(ggrepel)
+library(vegan)
+library(zoo)
+library(fmsb)
+library(paletteer)
+library(GGally)
+library(nord)
+library(hrbrthemes)
+library(sf)
+library("rnaturalearth")
+library("rnaturalearthdata")
+library("ggspatial")
+```
+
+
+```{r ks}
+knitr::opts_chunk$set(fig.width=6, fig.height=4, fig.path='./Figures/', echo= T, warning= F, message= F, dev = 'png', dev.args = list(png = list(type = "cairo")), dpi = 600)
+options(ggrepel.max.overlaps = Inf)
+extrafont::loadfonts(device="win")
+
+```
+
+```{r load data}
+
+st <- st_read('./data/IOPAC_SHP/USA_1_v41.shp') %>% filter(NAME_1 %in% c('Oregon', 'California', 'Washington'))
+  # here('data', 'IOPAC_SHP','USA_1_v41.shp')) 
+lt <- read_csv('./Data/iopac_lat-long-r.csv')
+
+lt_i <- lt %>%  arrange(desc(PRIMARY_LATITUDE)) %>% 
+  filter(!is.na(PRIMARY_LATITUDE)) %>% 
+  mutate(IOPAC_PORT_GROUP = case_when(IOPAC_PORT_GROUP == 'SOUTH AND CENTRAL WA COAST' ~ 'WA Coast',
+                                      IOPAC_PORT_GROUP == 'Morro' ~ 'Morro Bay',
+                               T ~ IOPAC_PORT_GROUP )) %>%
+  mutate(PRIMARY_LATITUDE = case_when(IOPAC_PORT_GROUP == 'Brookings' ~ PRIMARY_LATITUDE + 0.5,
+                                      IOPAC_PORT_GROUP == 'Los Angeles' ~ PRIMARY_LATITUDE - 0.4,
+                                      T ~ PRIMARY_LATITUDE)) %>%
+  # filter(IOPAC_PORT_GROUP %in% fp_v) %>% 
+  mutate(map_order = seq(1:20)) 
+shp_bi <- st_read('./data/IOPAC_SHP/IOPAC_complexes_20km_buffer_geo.shp')
+
+shp_bi %>% arrange(Order)
+
+shp <- readRDS('./Data/IOPAC_shapefiles.RDS') %>% filter(IOPAC_PORT_GROUP != 'Columbia River')
+# # read in iopac data
+iopac <- read_csv('./Data/iopac_lat-long-mod.csv') %>%
+  mutate(PRIMARY_LATITUDE = case_when(IOPAC_PORT_GROUP == 'Brookings' ~ PRIMARY_LATITUDE + 0.5,
+                                      IOPAC_PORT_GROUP == 'Coos Bay' ~ PRIMARY_LATITUDE + 0.5,
+                                      IOPAC_PORT_GROUP == 'Los Angeles' ~ PRIMARY_LATITUDE - 0.4,
+                                      IOPAC_PORT_GROUP == 'San Francisco' ~ PRIMARY_LATITUDE - 0.5,
+                                      IOPAC_PORT_GROUP == 'Morro Bay' ~ PRIMARY_LATITUDE - 0.4,
+                                      IOPAC_PORT_GROUP == 'San Diego' ~ PRIMARY_LATITUDE - 0.4,
+                                      T ~ PRIMARY_LATITUDE)) 
+# iopac$IOPAC_PORT_GROUP <- toupper(iopac$IOPAC_PORT_GROUP)
+
+iopac_lt <- read_csv('./Data/iopac_lt.csv')
+# iopac_sh
+
+```
+
+```{r projection settings1}
+crsLONGLAT <- "+proj=longlat +datum=WGS84 +no_defs"
+laea <- "+proj=laea +x_0=0 +y_0=0 +lon_0=-122.6 +lat_0=30.5"
+
+bb <- st_sfc(
+  st_polygon(list(cbind(
+    c(-145, -145, -60, -60, -145), # x-coordinates (longitudes) of points A,B,C,D
+    c(15, 75, 75, 15, 15)     # y-coordinates (latitudes) of points A,B,C,D
+    ))),
+  crs = crsLONGLAT)
+
+laeabb <- st_transform(bb, crs = laea)
+
+b <- st_bbox(laeabb)
+
+cm1 <- st_sfc(
+  st_polygon(list(cbind(
+    c(-128.5, -128.5, -116, -116, -128.5), # x-coordinates (longitudes) of points A,B,C,D
+    c(32, 48.5, 48.5, 32, 32)     # y-coordinates (latitudes) of points A,B,C,D
+    ))),
+  crs = crsLONGLAT) %>% 
+  st_transform(crs = laea) %>% 
+  st_bbox()
+
+cm2 <- st_sfc(
+  st_polygon(list(cbind(
+    c(-128.5, -128.5, -116, -116, -128.5), # x-coordinates (longitudes) of points A,B,C,D
+    c(32, 48.5, 48.5, 32, 32)     # y-coordinates (latitudes) of points A,B,C,D
+    ))),
+  crs = crsLONGLAT) %>% 
+  st_transform(crs = laea) %>% 
+  st_bbox()
+
+cm <- data.frame(rbind(cm1, cm2))
+```
+
+
+
+```{r mapzoom1}
+
+
+world <- ne_countries(scale = "medium", returnclass = "sf")
+
+world_points1 <- st_point_on_surface(world)
+world_points2 <- cbind(world, st_coordinates(st_point_on_surface(world$geometry)))
+world_points <- world_points2 %>% filter(geounit %in% c("Mexico", "Canada", "United States of America"))
+
+
+mapz1 <- ggplot(data = world) +
+  geom_sf(fill = "#4c556a", color ="white") +
+  geom_rect(data = cm, aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax), color = "black", fill = NA, 
+            size = 2, alpha = 0.5) +
+  coord_sf(crs  = "+proj=laea +x_0=0 +y_0=0 +lon_0=-122.6 +lat_0=30.5", xlim = c(b["xmin"], b["xmax"]), ylim =
+             c(b["ymin"], b["ymax"])) +
+  geom_sf_text(data= world_points,aes(x=X, y=Y, label=name),
+    color = "white", check_overlap = TRUE, size = 2.5, crs  = "+proj=laea +x_0=0 +y_0=0 +lon_0=-122.6 +lat_0=30.5") +
+  theme_map() +
+  theme(axis.title.x = element_blank(), axis.title.y = element_blank(),
+       plot.margin = unit(c(0, 0, 0, 0), "cm"), 
+       panel.border = element_rect(colour = "black", fill=NA, size=2),
+       panel.background = element_rect(fill = 'white'))
+  
+
+mapz1
+```
+
+
+
+```{r mapzoom2}
+
+
+mapz2 <- ggplot(data = world) +
+  geom_sf(fill = "#4c556a", color ="white") +
+  geom_rect(data = cm, aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax), color = "black", fill = NA, 
+            size = .75, alpha = 0.5) +
+  coord_sf(crs  = "+proj=laea +x_0=0 +y_0=0 +lon_0=-122.6 +lat_0=30.5") +
+  theme_map() +
+  theme(axis.title.x = element_blank(), axis.title.y = element_blank(),
+       plot.margin = unit(c(0, 0, 0, 0), "cm"), 
+       panel.border = element_rect(colour = "black", fill=NA, size=1), 
+       panel.background = element_rect(fill = 'white'))
+  
+
+mapz2
+```
+## This map is the base map that shows wa, or and ca
+
+```{r base map}
+base_map_iopac <- function(state) {
+  states <- map_data("state")
+  west_coast <- subset(states, region %in% state)
+  base_map <- ggplot(data = west_coast) +
+    geom_polygon(aes(x = long, y = lat, group = group), fill = "gray95", color = "gray85") 
+  return(base_map)
+}
+
+fstates <- c("washington", "oregon", "california")
+
+bm <- base_map_iopac(fstates)
+
+``` 
+
+## This adds the overlapping shape files specific to IOPAC
+
+```{r shape file edits}
+# shp <- iopac_sh 
+
+iopac_labels <- iopac_lt %>% select(IOPAC, PRIMARY_LATITUDE, PRIMARY_LONGITUDE) %>% filter(IOPAC != 'Other Coastal Washington') %>% distinct()       
+
+xlimits <- c(NA, -125)
+
+```
+
+
+```{r iopacmap_og, fig.height=10, fig.width=6.5}
+iopacpacfin_map <- base_map_iopac(fstates) +
+  geom_sf(data = shp, fill = "#4c556a", color ="white", size = 1, alpha = 0.30) +
+  geom_text_repel(seed = 41, aes(x=PRIMARY_LONGITUDE, y=PRIMARY_LATITUDE, label= IOPAC_PORT_GROUP), 
+                  data =subset(iopac, !IOPAC_PORT_GROUP %in% c('Columbia River', 'Other Coastal Washington', 'Puget Sound') & PRIMARY_LATITUDE!= 45.85), 
+                  size = 3.25,
+                  box.padding = 0.15, 
+                  point.padding = 0.5, 
+                  hjust = 1, 
+                  segment.alpha = 0.25, 
+                  xlim = xlimits, 
+                  direction = "y") +
+  geom_text_repel(seed = 41, aes(x=PRIMARY_LONGITUDE, y=PRIMARY_LATITUDE, label= IOPAC_PORT_GROUP), data = subset(iopac, PRIMARY_LATITUDE == 45.85 | PRIMARY_LATITUDE == 47.253671
+), size = 3.25,
+                  box.padding = 0.15, point.padding = 0.5, hjust = -.5, segment.alpha = 0.25) +
+  scale_x_continuous(limits = c(-127, -114), breaks=seq(-126, -114, 3), expand = expansion(mult = 0.2)) + 
+  theme_ipsum_rc(grid = 'none') +
+  theme(panel.grid.major = element_line(colour = "transparent")) +
+  theme(axis.title.x = element_blank(), axis.title.y = element_blank(),
+        legend.position = "bottom") +
+  scale_fill_nord(palette = "frost", discrete = F,
+  reverse = FALSE)
+
+iopacpacfin_map
+
+
+```
+
+
+
+```{r projection settings2}
+
+bb <- st_sfc(
+  st_polygon(list(cbind(
+    c(-128.5, -128.5, -116, -116, -128.5), # x-coordinates (longitudes) of points A,B,C,D
+    c(32, 48.5, 48.5, 32, 32)     # y-coordinates (latitudes) of points A,B,C,D
+    ))),
+  crs = crsLONGLAT)
+
+laeabb <- st_transform(bb, crs = laea)
+
+d <- st_bbox(laeabb)
+
+iopac <- iopac %>% filter(!is.na(PRIMARY_LATITUDE))
+
+a1 <- st_as_sf(iopac, coords = c("PRIMARY_LONGITUDE", "PRIMARY_LATITUDE"), 
+    crs = crsLONGLAT, agr = "constant") %>% 
+  filter(!IOPAC_PORT_GROUP %in% c('Other Coastal Washington', 'Columbia River')) %>% 
+  mutate(id = seq(1:19))
+
+
+```
+
+```{r refmap, fig.height=10, fig.width=6.5}
+
+refmap <- ggplot() +
+  # geom_sf(data = world, fill = "#4c556a", color ="white") +
+  geom_sf(data = st, color = 'white', fill = '#E5E9F0') +
+  geom_sf(data = shp, fill = "#4c556a", color ="white", size = 1, alpha = 0.30) +
+  coord_sf(crs = "+proj=laea +x_0=0 +y_0=0 +lon_0=-122.6 +lat_0=30.5", xlim = c(d["xmin"], d["xmax"]), ylim = c(d["ymin"], d["ymax"])) +
+  geom_sf_text(data = subset(a1, IOPAC_PORT_GROUP != "Puget Sound"), aes(label = IOPAC_PORT_GROUP), hjust = 1.25, check_overlap = T, family="sans", size = 3.25) +
+  geom_sf_text(data = subset(a1, id == 17), aes(label = IOPAC_PORT_GROUP), hjust = -.6, family="sans", size = 3.25) +
+  geom_sf_text(data = subset(a1, id == 19), aes(label = IOPAC_PORT_GROUP), hjust = -.35, family="sans", size = 3.25) +
+  theme_tufte() +
+  theme(axis.title.x = element_blank(), axis.title.y = element_blank(),
+       plot.margin = unit(c(0, 0, 0, 0), "cm")) 
+  
+
+
+```
+
+```{r refmapv2, fig.height=10, fig.width=6.5}
+
+
+refmap2 <- ggplot() +
+  # geom_sf(data = world, fill = "#4c556a", color ="white") +
+  geom_sf(data = st, color = 'white', fill = "#D8DEE9") +
+  geom_sf(data = shp_bi, aes(fill = as.character(Adjacency)), size = 1, alpha = 0.5, color = "#D8DEE9") +
+  coord_sf(crs = "+proj=laea +x_0=0 +y_0=0 +lon_0=-122.6 +lat_0=30.5", xlim = c(d["xmin"], d["xmax"]), ylim = c(d["ymin"], d["ymax"])) +
+  geom_sf_text(data = subset(a1, IOPAC_PORT_GROUP != "Puget Sound"), aes(label = IOPAC_PORT_GROUP), hjust = 1.2, check_overlap = T) +
+  geom_sf_text(data = subset(a1, IOPAC_PORT_GROUP == "Puget Sound"), aes(label = IOPAC_PORT_GROUP), hjust = -.35) +
+  scale_fill_manual(values = c("#6A7E4F", "#304848")) +
+  theme_tufte() +
+theme(axis.title.x = element_blank(), axis.title.y = element_blank(),
+       plot.margin = unit(c(0, 0, 0, 0), "cm"),
+      axis.text.x=element_blank(), #remove x axis labels
+        axis.ticks.x=element_blank(), #remove x axis ticks
+        axis.text.y=element_blank(),  #remove y axis labels
+        axis.ticks.y=element_blank(),  #remove y axis ticks
+legend.position = "none")
+
+```
+
+
+```{r refmap2_mapz1, fig.height=10, fig.width=6.5}
+
+
+ggdraw() +
+  draw_plot(refmap2) + 
+  draw_plot(mapz1, x = 0.05, y = 0.0, width = 0.4, height = 0.4)
+
+```
+## This one is fig 1 in the paper
+
+
+```{r refmap_mapz1, fig.height=10, fig.width=6.5}
+
+ggdraw() +
+  draw_plot(refmap) + 
+  draw_plot(mapz1, x = 0.05, y = 0.0, width = 0.39, height = 0.39)
+
+```
+
+```{r iopacog_mapz1, fig.height=10, fig.width=6.5}
+
+ggdraw() +
+  draw_plot(iopacpacfin_map) + 
+  draw_plot(mapz1, x = 0.52, y = 0.25, width = 0.45, height = 0.45)
+
+```
+
+```{r refmap2_mapz2, fig.height=10, fig.width=6.5}
+
+
+ggdraw() +
+  draw_plot(refmap2) + 
+  draw_plot(mapz2, x = 0.025, y = 0.0, width = 0.4, height = 0.4)
+
+```
+
+```{r refmap_mapz2, fig.height=10, fig.width=6.5}
+
+ggdraw() +
+  draw_plot(refmap) + 
+  draw_plot(mapz2, x = 0.05, y = 0.0, width = 0.4, height = 0.4)
+
+```
+
+```{r iopacog_mapz2, fig.height=10, fig.width=6.5}
+
+ggdraw() +
+  draw_plot(iopacpacfin_map) + 
+  draw_plot(mapz2, x = 0.5, y = 0.35, width = 0.4, height = 0.4)
+
+```
