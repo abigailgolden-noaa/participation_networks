@@ -58,11 +58,11 @@ port_grps <- read_csv(here::here(processdir,myfile3))
 
 # landings_iopac_mgrp <- readRDS(file = "./Data/landings_iopac_mgrp_crabyr.RDS")
 db <- rawdat %>%
-  mutate(AFI_REV_m = AFI_EXVESSEL_REVENUE/1000000) %>% # convert landings to millions
- mutate(IOPAC_PORT_GROUP = case_when(IOPAC_PORT_GROUP == 'SOUTH AND CENTRAL WA COAST' ~ 'WA COAST',
-                                                                T ~ IOPAC_PORT_GROUP))
+  mutate(AFI_REV_m = AFI_EXVESSEL_REVENUE/1000000)  # convert landings to millions
+ # mutate(IOPAC_PORT_GROUP = case_when(IOPAC_PORT_GROUP == 'SOUTH AND CENTRAL WA COAST' ~ 'WA COAST',
+                                                          #      T ~ IOPAC_PORT_GROUP))
 
-db[db==0] <- .000000000001 # convert 0's to near 0's for index calculation
+# db[db==0] <- .000000000001 # convert 0's to near 0's for index calculation
 
 ```
 
@@ -73,27 +73,34 @@ db[db==0] <- .000000000001 # convert 0's to near 0's for index calculation
 
 
 # read in iopac data
-iopac <- read_csv('./Data/iopac_lat-long-r.csv')
-iopac$IOPAC_PORT_GROUP <- toupper(iopac$IOPAC_PORT_GROUP)
+#iopac <- read_csv('./Data/iopac_lat-long-r.csv')
+#iopac$IOPAC_PORT_GROUP <- toupper(iopac$IOPAC_PORT_GROUP)
 
 
 
 db.1 <- db %>% 
   left_join(port_grps) %>% 
-  filter(IOPAC != "Unknown Ports") %>% #filter out tickets not associated with an IOPAC port
-  arrange(desc(PRIMARY_LATITUDE)) %>% # arrange latitudinally
+  #filter(IOPAC != "Unknown Ports") %>% #filter out tickets not associated with an IOPAC port
+  arrange(desc(PACFIN_LAT)) %>% # arrange latitudinally
   mutate(IOPAC_PORT_GROUP = factor(IOPAC_PORT_GROUP, levels = unique(IOPAC_PORT_GROUP))) # make IOPAC a factor variable
+
+# sum_revenue <- sum(db.1$AFI_REV_m, na.rm = TRUE)
+# 
+# db.1 %>% 
+#   group_by(IOPAC) %>% 
+#   summarize(pct_revenue = sum(AFI_REV_m, na.rm = TRUE)/sum_revenue*100)
 
 # db <- db %>% left_join(port_grps) %>%
 #   filter(IOPAC_PORT_GROUP != 'NOT_DESIGNATED') %>%
 #   arrange(desc(PRIMARY_LATITUDE)) %>%
 #   mutate(IOPAC_PORT_GROUP = factor(IOPAC_PORT_GROUP, levels = unique(IOPAC_PORT_GROUP)))
 
-db_ma <- db %>% filter(MANAGEMENT_GROUP_CODE == 'TOTAL') %>% # this is a species group code
+db_ma <- db.1 %>% 
+  #filter(MANAGEMENT_GROUP_CODE == 'TOTAL') %>% # this is a species group code, I think one that AP and others created to summarize revenue across all PacFIN species
     group_by(IOPAC_PORT_GROUP) %>%
   mutate(rm_REV = rollmean(AFI_REV_m, 3, fill = NA, align = "right")) # calculate rolling mean for previous three years 
 
-db_full <- db %>%
+db_full <- db.1 %>%
   filter(!IOPAC_PORT_GROUP %in% c('NOT_DESIGNATED', 'COASTWIDE') & MANAGEMENT_GROUP_CODE != 'TOTAL') %>%
   group_by(IOPAC_PORT_GROUP, CRAB_YEAR, PRIMARY_LATITUDE) %>% 
   mutate(total_revenue = sum(AFI_REV_m)) %>% # calculate total revenue by port and year
