@@ -29,21 +29,24 @@ library(sf)
 library("rnaturalearth")
 library("rnaturalearthdata")
 library("ggspatial")
+library(here)
 ```
 
 
 ```{r ks}
 knitr::opts_chunk$set(fig.width=6, fig.height=4, fig.path='./Figures/', echo= T, warning= F, message= F, dev = 'png', dev.args = list(png = list(type = "cairo")), dpi = 600)
 options(ggrepel.max.overlaps = Inf)
-extrafont::loadfonts(device="win")
+# extrafont::loadfonts(device="win")
 
 ```
 
 ```{r load data}
 
-st <- st_read('./data/IOPAC_SHP/USA_1_v41.shp') %>% filter(NAME_1 %in% c('Oregon', 'California', 'Washington'))
-  # here('data', 'IOPAC_SHP','USA_1_v41.shp')) 
-lt <- read_csv('./Data/iopac_lat-long-r.csv')
+datdir <- here::here("data/shapefiles")
+
+# st <- st_read(here::here('data/shapefiles/USA_1_v41.shp')) %>% filter(NAME_1 %in% c('Oregon', 'California', 'Washington'))
+#   # here('data', 'IOPAC_SHP','USA_1_v41.shp')) 
+lt <- read_csv(paste(datdir, 'iopac_lat-long-r.csv', sep = "/"))
 
 lt_i <- lt %>%  arrange(desc(PRIMARY_LATITUDE)) %>% 
   filter(!is.na(PRIMARY_LATITUDE)) %>% 
@@ -59,9 +62,9 @@ shp_bi <- st_read('./data/IOPAC_SHP/IOPAC_complexes_20km_buffer_geo.shp')
 
 shp_bi %>% arrange(Order)
 
-shp <- readRDS('./Data/IOPAC_shapefiles.RDS') %>% filter(IOPAC_PORT_GROUP != 'Columbia River')
+shp <- readRDS(paste(datdir, 'IOPAC_shapefiles.RDS', sep = "/")) %>% filter(IOPAC_PORT_GROUP != 'Columbia River')
 # # read in iopac data
-iopac <- read_csv('./Data/iopac_lat-long-mod.csv') %>%
+iopac <- read_csv(paste(datdir, '/iopac_lat-long-mod.csv', sep = "/")) %>%
   mutate(PRIMARY_LATITUDE = case_when(IOPAC_PORT_GROUP == 'Brookings' ~ PRIMARY_LATITUDE + 0.5,
                                       IOPAC_PORT_GROUP == 'Coos Bay' ~ PRIMARY_LATITUDE + 0.5,
                                       IOPAC_PORT_GROUP == 'Los Angeles' ~ PRIMARY_LATITUDE - 0.4,
@@ -71,7 +74,7 @@ iopac <- read_csv('./Data/iopac_lat-long-mod.csv') %>%
                                       T ~ PRIMARY_LATITUDE)) 
 # iopac$IOPAC_PORT_GROUP <- toupper(iopac$IOPAC_PORT_GROUP)
 
-iopac_lt <- read_csv('./Data/iopac_lt.csv')
+# iopac_lt <- read_csv(paste(datdir, 'iopac_lt.csv', sep = "/"))
 # iopac_sh
 
 ```
@@ -116,6 +119,7 @@ cm <- data.frame(rbind(cm1, cm2))
 
 ```{r mapzoom1}
 
+# this chunk produces the inset in Fig 1 of Speir et al. 2023; I don't need it yet (maybe at all)
 
 world <- ne_countries(scale = "medium", returnclass = "sf")
 
