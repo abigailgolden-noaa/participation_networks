@@ -227,6 +227,18 @@ iopacpacfin_map <- base_map_iopac(fstates) +
 iopacpacfin_map
 
 
+## trying to understand the difference between "South and central WA coast" in shp file
+## and "WA coast" in all my other data
+base_map_iopac(fstates) +
+  geom_sf(data = subset(shp, IOPAC_PORT_GROUP == "South and central WA coast"), fill = "#4c556a", color ="white", size = 1, alpha = 0.30) +
+  scale_x_continuous(limits = c(-127, -114), breaks=seq(-126, -114, 3), expand = expansion(mult = 0.2)) + 
+  theme_ipsum(grid = 'none') +
+  theme(panel.grid.major = element_line(colour = "transparent")) +
+  theme(axis.title.x = element_blank(), axis.title.y = element_blank(),
+        legend.position = "bottom") +
+  scale_fill_nord(palette = "frost", discrete = F,
+  reverse = FALSE)
+
 ```
 
 
