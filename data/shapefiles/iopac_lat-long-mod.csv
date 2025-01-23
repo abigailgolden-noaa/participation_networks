@@ -1,0 +1,24 @@
+IOPAC_PORT_GROUP,PRIMARY_LATITUDE,PRIMARY_LONGITUDE,STATE,REGION
+San Diego,33.224601,-117.306291,California,Southern California
+Los Angeles,34.019394,-118.410825,California,Southern California
+Santa Barbara,34.400601,-119.712955,California,Southern California
+Morro Bay,35.664386,-121.21965,California,Southern California
+Monterey,36.601193,-121.88311,California,Southern California
+San Francisco,37.769846,-122.22569,California,Northern California
+Bodega Bay,38.327215,-123.02923,California,Northern California
+Fort Bragg,39.439803,-123.801757,California,Northern California
+Eureka,40.793401,-124.155246,California,Northern California
+Crescent City,41.764514,-124.200779,California,Northern California
+Brookings,42.072408,-124.304909,Oregon,Oregon
+Coos Bay,43.381126,-124.232597,Oregon,Oregon
+Newport,44.620869,-124.043041,Oregon,Oregon
+Tillamook,45.456123,-123.833145,Oregon,Oregon
+Columbia River,45.631591,-121.168866,Oregon,Oregon
+Astoria,45.926112,-123.81524,Oregon,Oregon
+WA Coast,46.887187,-124.10735,Washington,Washington
+Other Coastal Washington,47.143897,-125.242401,Washington,Washington
+Puget Sound,47.253671,-122.444335,Washington,Washington
+North WA Coast,47.9063301,-124.6215221,Washington,Washington
+COASTWIDE,NA,NA,Coastwide,Coastwide
+NOT_DESIGNATED,NA,NA,Not Designated,Not Designated
+WA Coast,45.85,-122.5,Washington,Washington
